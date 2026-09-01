@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級電子看板 v10.2 (單向連動與UI優化版)</title>
+    <title>班級電子看板 v10.3 (完美對齊與防呆版)</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -40,6 +40,7 @@
             overflow: hidden;
         }
 
+        /* 按鈕與基礎元件 */
         button { cursor: pointer; border: none; font-weight: 600; padding: 12px 20px; border-radius: 8px; transition: 0.2s; }
         .btn-primary { background: #2980b9; color: #fff; }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
@@ -50,6 +51,7 @@
         .btn-danger { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); padding: 5px 10px; font-size: 0.9em; border: 1px solid var(--danger-color);}
         .btn-danger:hover { background: rgba(231, 76, 60, 0.2); }
         
+        /* 導覽列與卡片 */
         .cloud-bar { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .user-chip { display: flex; align-items: center; gap: 10px; color: #2c3e50; font-weight: bold; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
@@ -106,8 +108,8 @@
         .resizer:hover, .resizer.dragging { background: rgba(255,255,255,0.1); }
         .resizer-line { width: 4px; height: 50px; background: rgba(255,255,255,0.3); border-radius: 2px; }
 
-        .panel-header-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 2px dashed rgba(255,255,255,0.2); padding-bottom: 10px; }
-        .panel-header-container.big-title { border-bottom: 3px solid rgba(255,255,255,0.3); margin-bottom: 30px; }
+        .panel-header-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 2px dashed rgba(255,255,255,0.2); padding-bottom: 10px; position: relative; z-index: 20; }
+        .panel-header-container.big-title { border-bottom: 3px solid rgba(255,255,255,0.3); margin-bottom: 20px; }
         .panel-header { font-size: 1.8em; font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); }
         .right-panel .panel-header-container.big-title .panel-header { font-size: 2.5em; }
 
@@ -119,39 +121,51 @@
         .font-adjust-btns button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 10px; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .font-adjust-btns button:hover { background: rgba(255,255,255,0.3); transform: scale(1.05);}
         
-        .list-area { flex-grow: 1; overflow: auto; padding-right: 15px; }
+        .list-area { flex-grow: 1; overflow: auto; padding-right: 15px; position: relative; z-index: 10; }
         .list-area::-webkit-scrollbar { width: 8px; height: 8px; }
         .list-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
-        .left-panel .list-item-text { font-size: calc(1rem * var(--left-scale)); } 
-        .right-panel .list-item-text { font-size: calc(1rem * var(--right-scale)); }
+        /* 👑 核心優化：將 Scale 綁定在 list-area，讓內部所有元素(間距、圓圈)等比例縮放，避免重疊 👑 */
+        .left-panel .list-area { font-size: calc(1rem * var(--left-scale)); } 
+        .right-panel .list-area { font-size: calc(1rem * var(--right-scale)); }
 
-        .list-item-text { font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); transition: 0.1s; }
-        .moe-rb, .list-area.horizontal ruby, .punct, .eng-num, .char { font-size: 1.6em; }
+        .list-item-text { font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); transition: 0.1s; font-size: 1em; }
+        .moe-rb, .list-area.horizontal ruby, .punct, .eng-num, .char, .bopomofo-char { font-size: 1.6em; }
 
         .circle-number {
             background-color: var(--chalk-yellow); color: #1a3c2b;
-            min-width: 40px; height: 40px; border-radius: 50%;
+            min-width: 1.8em; height: 1.8em; border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            font-size: 24px; font-weight: 900; 
+            font-size: 1.2em; font-weight: 900; 
             box-shadow: 2px 2px 5px rgba(0,0,0,0.3); flex-shrink: 0; text-shadow: none;
         }
-        .right-panel .circle-number { min-width: 50px; height: 50px; font-size: 28px; }
 
-        /* 排版樣式略 (保留原本直/橫排與注音定位) */
+        /* 橫書排版 */
         .list-area.horizontal { display: block; padding-bottom: 20px; }
-        .list-area.horizontal .list-item-container { display: flex; align-items: flex-start; margin-bottom: 25px; cursor: pointer; }
-        .list-area.horizontal .circle-number { margin-right: 20px; margin-top: 5px; }
+        .list-area.horizontal .list-item-container { display: flex; align-items: flex-start; margin-bottom: 1.5em; cursor: pointer; }
+        .list-area.horizontal .circle-number { margin-right: 1em; margin-top: 0.2em; }
         .list-area.horizontal .list-item-text { display: block; line-height: 1.8; letter-spacing: 0.05em; }
-        .list-area.horizontal .eng-num, .list-area.horizontal .punct, .list-area.horizontal .char { display: inline-block; }
+        .list-area.horizontal .eng-num, .list-area.horizontal .punct, .list-area.horizontal .char, .list-area.horizontal .bopomofo-char { display: inline-block; vertical-align: middle; }
         ruby { ruby-align: center; }
         rt { font-size: 0.6em; color: var(--chalk-yellow); font-weight: normal; letter-spacing: -0.05em; font-family: "Bopomofo", "Noto Sans TC", sans-serif; }
 
-        .list-area.vertical { writing-mode: vertical-rl; text-orientation: mixed; height: 100%; overflow-x: auto; overflow-y: hidden; padding-bottom: 20px; padding-top: 25px; padding-right: 50px; box-sizing: border-box; }
-        .list-area.vertical .list-item-container { display: block; margin-left: 3.5em; margin-top: 15px; cursor: pointer; }
-        .list-area.vertical .circle-number { display: inline-flex; writing-mode: horizontal-tb; vertical-align: middle; margin-bottom: 0.1em; }
+        /* 👑 直書排版與防重疊、防切邊機制 👑 */
+        .list-area.vertical { 
+            writing-mode: vertical-rl; text-orientation: mixed; height: 100%; 
+            /* 預留極大的上下與右側安全邊距，確保放大後注音與輕聲絕對不會被切掉或被表頭遮住 */
+            padding-top: 2.5em; padding-right: 3em; padding-bottom: 20px; 
+            box-sizing: border-box; 
+        }
+        .list-area.vertical .list-item-container { 
+            display: block; 
+            margin-left: 3.8em; /* 欄距等比例放大，避免互相覆蓋 */
+            margin-top: 1em; 
+            cursor: pointer; 
+        }
+        .list-area.vertical .circle-number { display: inline-flex; writing-mode: horizontal-tb; vertical-align: middle; margin-bottom: 0.3em; }
         .list-area.vertical .list-item-text { display: inline; line-height: 2.6; letter-spacing: 0; }
-        .moe-char-vert { display: inline-block; position: relative; vertical-align: middle; margin: 0.02em 0; box-sizing: border-box; }
+        
+        .moe-char-vert { display: inline-block; position: relative; vertical-align: middle; margin: 0.05em 0; box-sizing: border-box; }
         .list-area.vertical .moe-char-vert.has-light-tone { margin-top: 0.9em; }
         .moe-rb { display: inline-block; line-height: 1; }
         .moe-rt { position: absolute; writing-mode: horizontal-tb; top: 0; left: 100%; margin-left: 0.1em; display: flex; flex-direction: column; align-items: center; width: 0.8em; }
@@ -159,13 +173,20 @@
         .moe-rt .sym span { display: block; }
         .moe-rt .tone { position: absolute; right: -0.65em; bottom: 0.05em; font-size: 0.6em; font-weight: bold; color: var(--chalk-yellow); line-height: 1; }
         .moe-rt .tone-light { position: absolute; top: -0.85em; left: 50%; transform: translateX(-50%); font-size: 0.55em; font-weight: bold; color: var(--chalk-yellow); }
+        
         .list-area.vertical .eng-num { writing-mode: horizontal-tb; display: inline-block; font-family: Arial, sans-serif; font-weight: 900; white-space: nowrap; margin: 0.1em 0; color: var(--chalk-white); vertical-align: middle; transform: translateY(0.1em); }
-        .list-area.vertical .punct { display: inline-block; vertical-align: middle; margin: 0.05em 0; }
+        .list-area.vertical .punct, .list-area.vertical .bopomofo-char { display: inline-block; vertical-align: middle; margin: 0.05em 0; }
         .list-area.vertical .char { display: inline-block; vertical-align: middle; }
+        
+        /* 獨立注音符號 (例如: ㄅ本) */
+        .bopomofo-char { font-family: "Bopomofo", "Noto Sans TC", sans-serif; }
 
+        /* 顯示模式切換 */
         body.mode-char-only rt, body.mode-char-only .moe-rt { display: none !important; }
+        
         body.mode-bpmf-only rb, body.mode-bpmf-only .moe-rb, body.mode-bpmf-only .char { display: none !important; } 
-        body.mode-bpmf-only .eng-num, body.mode-bpmf-only .punct { color: var(--chalk-white); }
+        body.mode-bpmf-only .eng-num, body.mode-bpmf-only .punct, body.mode-bpmf-only .bopomofo-char { color: var(--chalk-white) !important; display: inline-block !important; }
+        
         body.mode-bpmf-only .moe-char-vert { margin: 0.05em 0.1em; } 
         body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-ruby { border: 2px solid #5dade2; border-radius: 8px; padding: 0.1em 1.1em 0.25em 0.2em; box-sizing: border-box; background-color: transparent; }
         body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-light-tone { padding-top: 1.3em; }
@@ -180,6 +201,7 @@
         .duty-label { font-size: 1.2em; opacity: 0.8; margin-bottom: 8px; display: block; }
         .duty-content { font-size: calc(1.8em * var(--left-scale)); font-weight: 700; color: var(--chalk-yellow); text-shadow: var(--chalk-shadow); letter-spacing: 1px; }
 
+        /* 標頭資訊 */
         .top-info-bar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .date-navigator { display: flex; align-items: center; gap: 15px; }
         .nav-btn { background: rgba(255,255,255,0.1); color: var(--chalk-white); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; font-size: 1.2em; cursor: pointer; transition: 0.2s; padding: 0; }
@@ -191,13 +213,14 @@
         .digital-clock { font-size: 2.5em; font-weight: 700; font-family: 'Noto Sans TC', monospace; line-height: 1; color: rgba(255,255,255,0.9); white-space: pre-line;}
         .absentee-text { font-size: 1.8em; color: #ff6b6b; font-weight: bold; text-shadow: var(--chalk-shadow); max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 👑 自助打卡列專屬樣式 (自動縮放，不需捲動) */
+        /* 👑 自助打卡列專屬樣式 (緊湊無捲動條設計) */
         .attendance-bar-wrapper {
             background: rgba(0,0,0,0.25);
             border-radius: 8px;
             padding: 10px 15px;
             flex-shrink: 0;
             border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
         }
         .attendance-bar {
             display: flex;
@@ -238,7 +261,7 @@
         #fullscreen-btn:hover { background: rgba(255,255,255,0.9); color: #1a3c2b; }
         #loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; color:#333; font-weight:bold; }
 
-        /* Modals (修復白字問題) */
+        /* Modals */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(3px);}
         .modal-content { background: #fff; color: #333; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
         .modal-content-large { max-width: 900px; padding: 40px; border-radius: 20px;}
@@ -276,7 +299,7 @@
     <!-- Setup Screen -->
     <div id="setup-screen" class="app-screen active">
         <div class="container">
-            <div class="header"><h1>🏫 班級電子看板 v10.2 (雙系統連動版)</h1></div>
+            <div class="header"><h1>🏫 班級電子看板 v10.3 (完美對齊與防呆版)</h1></div>
             
             <div class="cloud-bar">
                 <div class="user-chip">
@@ -375,7 +398,7 @@
         </div>
     </div>
 
-    <!-- 請假選擇 Modal (含假別) -->
+    <!-- 請假選擇 Modal -->
     <div id="absent-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top:0; color:#2c3e50; font-size:1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px;">請點選請假座號與假別</h3>
@@ -504,6 +527,7 @@
         <button id="fullscreen-btn" title="全螢幕">⛶ 全螢幕</button>
     </div>
 
+    <!-- ===== JS 邏輯區域 ===== -->
     <script>
         const userFirebaseConfig = {
             apiKey: "AIzaSyC8ri0BEKk9hSzSZjq760eWHyNwo9Z2vqE",
@@ -514,14 +538,14 @@
             appId: "1:468701070411:web:95d9b588c37ed217aef9ce"
         };
 
-        const py2bpmf = {"a":"ㄚ","ai":"ㄞ","an":"ㄢ","ang":"ㄤ","ao":"ㄠ","ba":"ㄅㄚ","bai":"ㄅㄞ","ban":"ㄅㄢ","bang":"ㄅㄤ","bao":"ㄅㄠ","bei":"ㄅㄟ","ben":"ㄅㄣ","beng":"ㄅㄥ","bi":"ㄅㄧ","bian":"ㄅㄧㄢ","biao":"ㄅㄧㄠ","bie":"ㄅㄧㄝ","bin":"ㄅㄧㄣ","bing":"ㄅㄧㄥ","bo":"ㄅㄛ","bu":"ㄅㄨ","ca":"ㄘㄚ","cai":"ㄘㄞ","can":"ㄘㄢ","cang":"ㄘㄤ","cao":"ㄘㄠ","ce":"ㄘㄜ","cen":"ㄘㄣ","ceng":"ㄘㄥ","cha":"ㄔㄚ","chai":"ㄔㄞ","chan":"ㄔㄤ","chang":"ㄔㄤ","chao":"ㄔㄠ","che":"ㄔㄜ","chen":"ㄔㄣ","cheng":"ㄔㄥ","chi":"ㄔ","chong":"ㄔㄨㄥ","chou":"ㄔㄡ","chu":"ㄔㄨ","chua":"ㄔㄨㄚ","chuai":"ㄔㄨㄞ","chuan":"ㄔㄨㄢ","chuang":"ㄔㄨㄤ","chui":"ㄔㄨㄟ","chun":"ㄔㄨㄣ","chuo":"ㄔㄨㄛ","ci":"ㄘ","cong":"ㄘㄨㄥ","cou":"ㄘㄡ","cu":"ㄘㄨ","cuan":"ㄘㄨㄢ","cui":"ㄘㄨㄟ","cun":"ㄘㄨㄣ","cuo":"ㄘㄨㄛ","da":"ㄉㄚ","dai":"ㄉㄞ","dan":"ㄉㄢ","dang":"ㄉㄤ","dao":"ㄉㄠ","de":"ㄉㄜ","dei":"ㄉㄟ","den":"ㄉㄣ","deng":"ㄉㄥ","di":"ㄉㄧ","dian":"ㄉㄧㄢ","diao":"ㄉㄧㄠ","die":"ㄉㄧㄝ","ding":"ㄉㄧㄥ","diu":"ㄉㄧㄡ","dong":"ㄉㄨㄥ","dou":"ㄉㄡ","du":"ㄉㄨ","duan":"ㄉㄨㄢ","dui":"ㄉㄨㄟ","dun":"ㄉㄨㄣ","duo":"ㄉㄨㄛ","e":"ㄜ","ei":"ㄟ","en":"ㄣ","eng":"ㄥ","er":"ㄦ","fa":"ㄈㄚ","fan":"ㄈㄢ","fang":"ㄈㄤ","fei":"ㄈㄟ","fen":"ㄈㄣ","feng":"ㄈㄥ","fo":"ㄈㄛ","fou":"ㄈㄡ","fu":"ㄈㄨ","ga":"ㄍㄚ","gai":"ㄍㄞ","gan":"ㄍㄢ","gang":"ㄍㄤ","gao":"ㄍㄠ","ge":"ㄍㄜ","gei":"ㄍㄟ","gen":"ㄍㄣ","geng":"ㄍㄥ","gong":"ㄍㄨㄥ","gou":"ㄍㄡ","gu":"ㄍㄨ","gua":"ㄍㄨㄚ","guai":"ㄍㄨㄞ","guan":"ㄍㄨㄢ","guang":"ㄍㄨㄤ","gui":"ㄍㄨㄟ","gun":"ㄍㄨㄣ","guo":"ㄍㄨㄛ","ha":"ㄏㄚ","hai":"ㄏㄞ","han":"ㄏㄢ","hang":"ㄏㄤ","hao":"ㄏㄠ","he":"ㄏㄜ","hei":"ㄏㄟ","hen":"ㄏㄣ","heng":"ㄏㄥ","hong":"ㄏㄨㄥ","hou":"ㄏㄡ","hu":"ㄏㄨ","hua":"ㄏㄨㄚ","huai":"ㄏㄨㄞ","huan":"ㄏㄨㄢ","huang":"ㄏㄨㄤ","hui":"ㄏㄨㄟ","hun":"ㄏㄨㄣ","huo":"ㄏㄨㄛ","ji":"ㄐㄧ","jia":"ㄐㄧㄚ","jian":"ㄐㄧㄢ","jiang":"ㄐㄧㄤ","jiao":"ㄐㄧㄠ","jie":"ㄐㄧㄝ","jin":"ㄐㄧㄣ","jing":"ㄐㄧㄥ","jiong":"ㄐㄩㄥ","jiu":"ㄐㄧㄡ","ju":"ㄐㄩ","juan":"ㄐㄩㄢ","jue":"ㄐㄩㄝ","jun":"ㄐㄩㄣ","ka":"ㄎㄚ","kai":"ㄎㄞ","kan":"ㄎㄢ","kang":"ㄎㄤ","kao":"ㄎㄠ","ke":"ㄎㄜ","kei":"ㄎㄟ","ken":"ㄎㄣ","keng":"ㄎㄥ","kong":"ㄎㄨㄥ","kou":"ㄎㄡ","ku":"ㄎㄨ","kua":"ㄎㄨㄚ","kuai":"ㄎㄨㄞ","kuan":"ㄎㄨㄢ","kuang":"ㄎㄨㄤ","kui":"ㄎㄨㄟ","kun":"ㄎㄨㄣ","kuo":"ㄎㄨㄛ","la":"ㄌㄚ","lai":"ㄌㄞ","lan":"ㄌㄢ","lang":"ㄌㄤ","lao":"ㄌㄠ","le":"ㄌㄜ","lei":"ㄌㄟ","leng":"ㄌㄥ","li":"ㄌㄧ","lia":"ㄌㄧㄚ","lian":"ㄌㄧㄢ","liang":"ㄌㄧㄤ","liao":"ㄌㄧㄠ","lie":"ㄌㄧㄝ","lin":"ㄌㄧㄣ","ling":"ㄌㄧㄥ","liu":"ㄌㄧㄡ","lo":"ㄌㄛ","long":"ㄌㄨㄥ","lou":"ㄌㄡ","lu":"ㄌㄨ","luan":"ㄌㄨㄢ","lun":"ㄌㄨㄣ","luo":"ㄌㄨㄛ","lv":"ㄌㄩ","lve":"ㄌㄩㄝ","ma":"ㄇㄚ","mai":"ㄇㄞ","man":"ㄇㄢ","mang":"ㄇㄤ","mao":"ㄇㄠ","me":"ㄇㄜ","mei":"ㄇㄟ","men":"ㄇㄣ","meng":"ㄇㄥ","mi":"ㄇㄧ","mian":"ㄇㄧㄢ","miao":"ㄇㄧㄠ","mie":"ㄇㄧㄝ","min":"ㄇㄧㄣ","ming":"ㄇㄧㄥ","miu":"ㄇㄧㄡ","mo":"ㄇㄛ","mou":"ㄇㄡ","mu":"ㄇㄨ","na":"ㄋㄚ","nai":"ㄋㄞ","nan":"ㄋㄢ","nang":"ㄋㄤ","nao":"ㄋㄠ","ne":"ㄋㄜ","nei":"ㄋㄟ","nen":"ㄋㄣ","neng":"ㄋㄥ","ni":"ㄋㄧ","nian":"ㄋㄧㄢ","niang":"ㄋㄧㄤ","niao":"ㄋㄧㄠ","nie":"ㄋㄧㄝ","nin":"ㄋㄧㄣ","ning":"ㄋㄧㄥ","niu":"ㄋㄧㄡ","nong":"ㄋㄨㄥ","nou":"ㄋㄡ","nu":"ㄋㄨ","nuan":"ㄋㄨㄢ","nun":"ㄋㄨㄣ","nuo":"ㄋㄨㄛ","nv":"ㄋㄩ","nve":"ㄋㄩㄝ","o":"ㄛ","ou":"ㄡ","pa":"ㄆㄚ","pai":"ㄆㄞ","pan":"ㄆㄢ","pang":"ㄆㄤ","pao":"ㄆㄠ","pei":"ㄆㄟ","pen":"ㄆㄣ","peng":"ㄆㄥ","pi":"ㄆㄧ","pian":"ㄆㄧㄢ","piao":"ㄆㄧㄠ","pie":"ㄆㄧㄝ","pin":"ㄆㄧㄣ","ping":"ㄆㄧㄥ","po":"ㄆㄛ","pou":"ㄆㄡ","pu":"ㄆㄨ","qi":"ㄑㄧ","qia":"ㄑㄧㄚ","qian":"ㄑㄧㄢ","qiang":"ㄑㄧㄤ","qiao":"ㄑㄧㄠ","qie":"ㄑㄧㄝ","qin":"ㄑㄧㄣ","qing":"ㄑㄧㄥ","qiong":"ㄑㄩㄥ","qiu":"ㄑㄧㄡ","qu":"ㄑㄩ","quan":"ㄑㄩㄢ","que":"ㄑㄩㄝ","qun":"ㄑㄩㄣ","ran":"ㄖㄢ","rang":"ㄖㄤ","rao":"ㄖㄠ","re":"ㄖㄜ","ren":"ㄖㄣ","reng":"ㄖㄥ","ri":"ㄖ","rong":"ㄖㄨㄥ","rou":"ㄖㄡ","ru":"ㄖㄨ","ruan":"ㄖㄨㄢ","rui":"ㄖㄨㄟ","run":"ㄖㄨㄣ","ruo":"ㄖㄨㄛ","sa":"ㄙㄚ","sai":"ㄙㄞ","san":"ㄙㄢ","sang":"ㄙㄤ","sao":"ㄙㄠ","se":"ㄙㄜ","sen":"ㄙㄣ","seng":"ㄙㄥ","sha":"ㄕㄚ","shai":"ㄕㄞ","shan":"ㄕㄢ","shang":"ㄕㄤ","shao":"ㄕㄠ","she":"ㄕㄜ","shei":"ㄕㄟ","shen":"ㄕㄣ","sheng":"ㄕㄥ","shi":"ㄕ","shou":"ㄕㄡ","shu":"ㄕㄨ","shua":"ㄕㄨㄚ","shuai":"ㄕㄨㄞ","shuan":"ㄕㄨㄢ","shuang":"ㄕㄨㄤ","shui":"ㄕㄨㄟ","shun":"ㄕㄨㄣ","shuo":"ㄕㄨㄛ","si":"ㄙ","song":"ㄙㄨㄥ","sou":"ㄙㄡ","su":"ㄙㄨ","suan":"ㄙㄨㄢ","sui":"ㄙㄨㄟ","sun":"ㄙㄨㄣ","suo":"ㄙㄨㄛ","ta":"ㄊㄚ","tai":"ㄊㄞ","tan":"ㄊㄢ","tang":"ㄊㄤ","tao":"ㄊㄠ","te":"ㄊㄜ","teng":"ㄊㄥ","ti":"ㄊㄧ","tian":"ㄊㄧㄢ","tiao":"ㄊㄧㄠ","tie":"ㄊㄧㄝ","ting":"ㄊㄧㄥ","tong":"ㄊㄨㄥ","tou":"ㄊㄡ","tu":"ㄊㄨ","tuan":"ㄊㄨㄢ","tui":"ㄊㄨㄟ","tun":"ㄊㄨㄣ","tuo":"ㄊㄨㄛ","wa":"ㄨㄚ","wai":"ㄨㄞ","wan":"ㄨㄢ","wang":"ㄨㄤ","wei":"ㄨㄟ","wen":"ㄨㄣ","weng":"ㄨㄥ","wo":"ㄨㄛ","wu":"ㄨ","xi":"ㄒㄧ","xia":"ㄒㄧㄚ","xian":"ㄒㄧㄢ","xiang":"ㄒㄧㄤ","xiao":"ㄒㄧㄠ","xie":"ㄒㄧㄝ","xin":"ㄒㄧㄣ","xing":"ㄒㄧㄥ","xiong":"ㄒㄩㄥ","xiu":"ㄒㄧㄡ","xu":"ㄒㄩ","xuan":"ㄒㄩㄢ","xue":"ㄒㄩㄝ","xun":"ㄒㄩㄣ","ya":"ㄧㄚ","yan":"ㄧㄤ","yang":"ㄧㄤ","yao":"ㄧㄠ","ye":"ㄧㄝ","yi":"ㄧ","yin":"ㄧㄣ","ying":"ㄧㄥ","yo":"ㄧㄛ","yong":"ㄩㄥ","you":"ㄧㄡ","yu":"ㄩ","yuan":"ㄩㄢ","yue":"ㄩㄝ","yun":"ㄩㄣ","za":"ㄗㄚ","zai":"ㄗㄞ","zan":"ㄗㄢ","zang":"ㄗㄤ","zao":"ㄗㄠ","ze":"ㄗㄜ","zei":"ㄗㄟ","zen":"ㄗㄣ","zeng":"ㄗㄥ","zha":"ㄓㄚ","zhai":"ㄓㄞ","zhan":"ㄓㄢ","zhang":"ㄓㄤ","zhao":"ㄓㄠ","zhe":"ㄓㄜ","zhei":"ㄓㄟ","zhen":"ㄓㄣ","zheng":"ㄓㄥ","zhi":"ㄓ","zhong":"ㄓㄨㄥ","zhou":"ㄓㄡ","zhu":"ㄓㄨ","zhua":"ㄓㄨㄚ","zhuai":"ㄓㄨㄞ","zhuan":"ㄓㄨㄢ","zhuang":"ㄓㄨㄤ","zhui":"ㄓㄨㄟ","zhun":"ㄓㄨㄣ","zhuo":"ㄓㄨㄛ","zi":"ㄗ","zong":"ㄗㄨㄥ","zou":"ㄗㄡ","zu":"ㄗㄨ","zuan":"ㄗㄨㄢ","zui":"ㄗㄨㄟ","zun":"ㄗㄨㄣ","zuo":"ㄗㄨㄛ"};
+        const py2bpmf = {"a":"ㄚ","ai":"ㄞ","an":"ㄢ","ang":"ㄤ","ao":"ㄠ","ba":"ㄅㄚ","bai":"ㄅㄞ","ban":"ㄅㄢ","bang":"ㄅㄤ","bao":"ㄅㄠ","bei":"ㄅㄟ","ben":"ㄅㄣ","beng":"ㄅㄥ","bi":"ㄅㄧ","bian":"ㄅㄧㄢ","biao":"ㄅㄧㄠ","bie":"ㄅㄧㄝ","bin":"ㄅㄧㄣ","bing":"ㄅㄧㄥ","bo":"ㄅㄛ","bu":"ㄅㄨ","ca":"ㄘㄚ","cai":"ㄘㄞ","can":"ㄘㄢ","cang":"ㄘㄤ","cao":"ㄘㄠ","ce":"ㄘㄜ","cen":"ㄘㄣ","ceng":"ㄘㄥ","cha":"ㄔㄚ","chai":"ㄔㄞ","chan":"ㄔㄢ","chang":"ㄔㄤ","chao":"ㄔㄠ","che":"ㄔㄜ","chen":"ㄔㄣ","cheng":"ㄔㄥ","chi":"ㄔ","chong":"ㄔㄨㄥ","chou":"ㄔㄡ","chu":"ㄔㄨ","chua":"ㄔㄨㄚ","chuai":"ㄔㄨㄞ","chuan":"ㄔㄨㄢ","chuang":"ㄔㄨㄤ","chui":"ㄔㄨㄟ","chun":"ㄔㄨㄣ","chuo":"ㄔㄨㄛ","ci":"ㄘ","cong":"ㄘㄨㄥ","cou":"ㄘㄡ","cu":"ㄘㄨ","cuan":"ㄘㄨㄢ","cui":"ㄘㄨㄟ","cun":"ㄘㄨㄣ","cuo":"ㄘㄨㄛ","da":"ㄉㄚ","dai":"ㄉㄞ","dan":"ㄉㄢ","dang":"ㄉㄤ","dao":"ㄉㄠ","de":"ㄉㄜ","dei":"ㄉㄟ","den":"ㄉㄣ","deng":"ㄉㄥ","di":"ㄉㄧ","dian":"ㄉㄧㄢ","diao":"ㄉㄧㄠ","die":"ㄉㄧㄝ","ding":"ㄉㄧㄥ","diu":"ㄉㄧㄡ","dong":"ㄉㄨㄥ","dou":"ㄉㄡ","du":"ㄉㄨ","duan":"ㄉㄨㄢ","dui":"ㄉㄨㄟ","dun":"ㄉㄨㄣ","duo":"ㄉㄨㄛ","e":"ㄜ","ei":"ㄟ","en":"ㄣ","eng":"ㄥ","er":"ㄦ","fa":"ㄈㄚ","fan":"ㄈㄢ","fang":"ㄈㄤ","fei":"ㄈㄟ","fen":"ㄈㄣ","feng":"ㄈㄥ","fo":"ㄈㄛ","fou":"ㄈㄡ","fu":"ㄈㄨ","ga":"ㄍㄚ","gai":"ㄍㄞ","gan":"ㄍㄢ","gang":"ㄍㄤ","gao":"ㄍㄠ","ge":"ㄍㄜ","gei":"ㄍㄟ","gen":"ㄍㄣ","geng":"ㄍㄥ","gong":"ㄍㄨㄥ","gou":"ㄍㄡ","gu":"ㄍㄨ","gua":"ㄍㄨㄚ","guai":"ㄍㄨㄞ","guan":"ㄍㄨㄢ","guang":"ㄍㄨㄤ","gui":"ㄍㄨㄟ","gun":"ㄍㄨㄣ","guo":"ㄍㄨㄛ","ha":"ㄏㄚ","hai":"ㄏㄞ","han":"ㄏㄢ","hang":"ㄏㄤ","hao":"ㄏㄠ","he":"ㄏㄜ","hei":"ㄏㄟ","hen":"ㄏㄣ","heng":"ㄏㄥ","hong":"ㄏㄨㄥ","hou":"ㄏㄡ","hu":"ㄏㄨ","hua":"ㄏㄨㄚ","huai":"ㄏㄨㄞ","huan":"ㄏㄨㄢ","huang":"ㄏㄨㄤ","hui":"ㄏㄨㄟ","hun":"ㄏㄨㄣ","huo":"ㄏㄨㄛ","ji":"ㄐㄧ","jia":"ㄐㄧㄚ","jian":"ㄐㄧㄢ","jiang":"ㄐㄧㄤ","jiao":"ㄐㄧㄠ","jie":"ㄐㄧㄝ","jin":"ㄐㄧㄣ","jing":"ㄐㄧㄥ","jiong":"ㄐㄩㄥ","jiu":"ㄐㄧㄡ","ju":"ㄐㄩ","juan":"ㄐㄩㄢ","jue":"ㄐㄩㄝ","jun":"ㄐㄩㄣ","ka":"ㄎㄚ","kai":"ㄎㄞ","kan":"ㄎㄢ","kang":"ㄎㄤ","kao":"ㄎㄠ","ke":"ㄎㄜ","kei":"ㄎㄟ","ken":"ㄎㄣ","keng":"ㄎㄥ","kong":"ㄎㄨㄥ","kou":"ㄎㄡ","ku":"ㄎㄨ","kua":"ㄎㄨㄚ","kuai":"ㄎㄨㄞ","kuan":"ㄎㄨㄢ","kuang":"ㄎㄨㄤ","kui":"ㄎㄨㄟ","kun":"ㄎㄨㄣ","kuo":"ㄎㄨㄛ","la":"ㄌㄚ","lai":"ㄌㄞ","lan":"ㄌㄢ","lang":"ㄌㄤ","lao":"ㄌㄠ","le":"ㄌㄜ","lei":"ㄌㄟ","leng":"ㄌㄥ","li":"ㄌㄧ","lia":"ㄌㄧㄚ","lian":"ㄌㄧㄢ","liang":"ㄌㄧㄤ","liao":"ㄌㄧㄠ","lie":"ㄌㄧㄝ","lin":"ㄌㄧㄣ","ling":"ㄌㄧㄥ","liu":"ㄌㄧㄡ","lo":"ㄌㄛ","long":"ㄌㄨㄥ","lou":"ㄌㄡ","lu":"ㄌㄨ","luan":"ㄌㄨㄢ","lun":"ㄌㄨㄣ","luo":"ㄌㄨㄛ","lv":"ㄌㄩ","lve":"ㄌㄩㄝ","ma":"ㄇㄚ","mai":"ㄇㄞ","man":"ㄇㄢ","mang":"ㄇㄤ","mao":"ㄇㄠ","me":"ㄇㄜ","mei":"ㄇㄟ","men":"ㄇㄣ","meng":"ㄇㄥ","mi":"ㄇㄧ","mian":"ㄇㄧㄢ","miao":"ㄇㄧㄠ","mie":"ㄇㄧㄝ","min":"ㄇㄧㄣ","ming":"ㄇㄧㄥ","miu":"ㄇㄧㄡ","mo":"ㄇㄛ","mou":"ㄇㄡ","mu":"ㄇㄨ","na":"ㄋㄚ","nai":"ㄋㄞ","nan":"ㄋㄢ","nang":"ㄋㄤ","nao":"ㄋㄠ","ne":"ㄋㄜ","nei":"ㄋㄟ","nen":"ㄋㄣ","neng":"ㄋㄥ","ni":"ㄋㄧ","nian":"ㄋㄧㄢ","niang":"ㄋㄧㄤ","niao":"ㄋㄧㄠ","nie":"ㄋㄧㄝ","nin":"ㄋㄧㄣ","ning":"ㄋㄧㄥ","niu":"ㄋㄧㄡ","nong":"ㄋㄨㄥ","nou":"ㄋㄡ","nu":"ㄋㄨ","nuan":"ㄋㄨㄢ","nun":"ㄋㄨㄣ","nuo":"ㄋㄨㄛ","nv":"ㄋㄩ","nve":"ㄋㄩㄝ","o":"ㄛ","ou":"ㄡ","pa":"ㄆㄚ","pai":"ㄆㄞ","pan":"ㄆㄢ","pang":"ㄆㄤ","pao":"ㄆㄠ","pei":"ㄆㄟ","pen":"ㄆㄣ","peng":"ㄆㄥ","pi":"ㄆㄧ","pian":"ㄆㄧㄢ","piao":"ㄆㄧㄠ","pie":"ㄆㄧㄝ","pin":"ㄆㄧㄣ","ping":"ㄆㄧㄥ","po":"ㄆㄛ","pou":"ㄆㄡ","pu":"ㄆㄨ","qi":"ㄑㄧ","qia":"ㄑㄧㄚ","qian":"ㄑㄧㄢ","qiang":"ㄑㄧㄤ","qiao":"ㄑㄧㄠ","qie":"ㄑㄧㄝ","qin":"ㄑㄧㄣ","qing":"ㄑㄧㄥ","qiong":"ㄑㄩㄥ","qiu":"ㄑㄧㄡ","qu":"ㄑㄩ","quan":"ㄑㄩㄢ","que":"ㄑㄩㄝ","qun":"ㄑㄩㄣ","ran":"ㄖㄢ","rang":"ㄖㄤ","rao":"ㄖㄠ","re":"ㄖㄜ","ren":"ㄖㄣ","reng":"ㄖㄥ","ri":"ㄖ","rong":"ㄖㄨㄥ","rou":"ㄖㄡ","ru":"ㄖㄨ","ruan":"ㄖㄨㄢ","rui":"ㄖㄨㄟ","run":"ㄖㄨㄣ","ruo":"ㄖㄨㄛ","sa":"ㄙㄚ","sai":"ㄙㄞ","san":"ㄙㄢ","sang":"ㄙㄤ","sao":"ㄙㄠ","se":"ㄙㄜ","sen":"ㄙㄣ","seng":"ㄙㄥ","sha":"ㄕㄚ","shai":"ㄕㄞ","shan":"ㄕㄢ","shang":"ㄕㄤ","shao":"ㄕㄠ","she":"ㄕㄜ","shei":"ㄕㄟ","shen":"ㄕㄣ","sheng":"ㄕㄥ","shi":"ㄕ","shou":"ㄕㄡ","shu":"ㄕㄨ","shua":"ㄕㄨㄚ","shuai":"ㄕㄨㄞ","shuan":"ㄕㄨㄢ","shuang":"ㄕㄨㄤ","shui":"ㄕㄨㄟ","shun":"ㄕㄨㄣ","shuo":"ㄕㄨㄛ","si":"ㄙ","song":"ㄙㄨㄥ","sou":"ㄙㄡ","su":"ㄙㄨ","suan":"ㄙㄨㄢ","sui":"ㄙㄨㄟ","sun":"ㄙㄨㄣ","suo":"ㄙㄨㄛ","ta":"ㄊㄚ","tai":"ㄊㄞ","tan":"ㄊㄢ","tang":"ㄊㄤ","tao":"ㄊㄠ","te":"ㄊㄜ","teng":"ㄊㄥ","ti":"ㄊㄧ","tian":"ㄊㄧㄢ","tiao":"ㄊㄧㄠ","tie":"ㄊㄧㄝ","ting":"ㄊㄧㄥ","tong":"ㄊㄨㄥ","tou":"ㄊㄡ","tu":"ㄊㄨ","tuan":"ㄊㄨㄢ","tui":"ㄊㄨㄟ","tun":"ㄊㄨㄣ","tuo":"ㄊㄨㄛ","wa":"ㄨㄚ","wai":"ㄨㄞ","wan":"ㄨㄢ","wang":"ㄨㄤ","wei":"ㄨㄟ","wen":"ㄨㄣ","weng":"ㄨㄥ","wo":"ㄨㄛ","wu":"ㄨ","xi":"ㄒㄧ","xia":"ㄒㄧㄚ","xian":"ㄒㄧㄢ","xiang":"ㄒㄧㄤ","xiao":"ㄒㄧㄠ","xie":"ㄒㄧㄝ","xin":"ㄒㄧㄣ","xing":"ㄒㄧㄥ","xiong":"ㄒㄩㄥ","xiu":"ㄒㄧㄡ","xu":"ㄒㄩ","xuan":"ㄒㄩㄢ","xue":"ㄒㄩㄝ","xun":"ㄒㄩㄣ","ya":"ㄧㄚ","yan":"ㄧㄤ","yang":"ㄧㄤ","yao":"ㄧㄠ","ye":"ㄧㄝ","yi":"ㄧ","yin":"ㄧㄣ","ying":"ㄧㄥ","yo":"ㄧㄛ","yong":"ㄩㄥ","you":"ㄧㄡ","yu":"ㄩ","yuan":"ㄩㄢ","yue":"ㄩㄝ","yun":"ㄩㄣ","za":"ㄗㄚ","zai":"ㄗㄞ","zan":"ㄗㄢ","zang":"ㄗㄤ","zao":"ㄗㄠ","ze":"ㄗㄜ","zei":"ㄗㄟ","zen":"ㄗㄣ","zeng":"ㄗㄥ","zha":"ㄓㄚ","zhai":"ㄓㄞ","zhan":"ㄓㄢ","zhang":"ㄓㄤ","zhao":"ㄓㄠ","zhe":"ㄓㄜ","zhei":"ㄓㄟ","zhen":"ㄓㄣ","zheng":"ㄓㄥ","zhi":"ㄓ","zhong":"ㄓㄨㄥ","zhou":"ㄓㄡ","zhu":"ㄓㄨ","zhua":"ㄓㄨㄚ","zhuai":"ㄓㄨㄞ","zhuan":"ㄓㄨㄢ","zhuang":"ㄓㄨㄤ","zhui":"ㄓㄨㄟ","zhun":"ㄓㄨㄣ","zhuo":"ㄓㄨㄛ","zi":"ㄗ","zong":"ㄗㄨㄥ","zou":"ㄗㄡ","zu":"ㄗㄨ","zuan":"ㄗㄨㄢ","zui":"ㄗㄨㄟ","zun":"ㄗㄨㄣ","zuo":"ㄗㄨㄛ"};
 
+        /* 👑 優化：精準辨識原生注音符號 (例如「ㄅ」)，確保純注音模式完美保留 👑 */
         function generateRubyData(text) {
             let result = [];
             const regex = /([a-zA-Z0-9.\s~-]+)|(.)/g;
             let match;
             
-            // 判斷是否為注音符號區間的 Unicode (包含擴充字元)
             const isBopomofo = (char) => {
                 const code = char.charCodeAt(0);
                 return (code >= 0x3100 && code <= 0x312F) || (code >= 0x31A0 && code <= 0x31BA);
@@ -533,43 +557,39 @@
                 } else if (match[2]) {
                     const char = match[2];
                     
-                    // 1. 先判斷是否為注音符號
                     if (isBopomofo(char)) {
-                        result.push({ char: char, bpmf: char, type: 'char' });
+                        result.push({ char: char, bpmf: '', type: 'bopomofo-char' });
                         continue;
                     }
                     
-                    // 2. 再判斷是否為標點符號
                     if (/[a-zA-Z0-9\s，。！？、；：()（）_《》「」【】.]/.test(char)) {
                         result.push({ char: char, bpmf: '', type: 'punct' });
-                        continue;
-                    } 
-                    
-                    // 3. 最後才是中文字轉換
-                    try {
-                        let pyRes = window.pinyinPro.pinyin(char, { type: 'array', toneType: 'num' });
-                        if (!pyRes || pyRes.length === 0) {
+                    } else {
+                        try {
+                            let pyRes = window.pinyinPro.pinyin(char, { type: 'array', toneType: 'num' });
+                            if (!pyRes || pyRes.length === 0) {
+                                result.push({ char: char, bpmf: '', type: 'char' });
+                                continue;
+                            }
+                            let pyStr = pyRes[0];
+                            let m = pyStr.toLowerCase().match(/([a-z]+)(\d)?/);
+                            if (!m) {
+                                result.push({ char: char, bpmf: '', type: 'char' });
+                                continue;
+                            }
+                            let py = m[1].replace('ü', 'v');
+                            let tone = m[2] || '1';
+                            let bpmf = py2bpmf[py] || '';
+                            
+                            if (!bpmf) {
+                                result.push({ char: char, bpmf: '', type: 'char' });
+                                continue;
+                            }
+                            if (tone === '2') bpmf += 'ˊ'; else if (tone === '3') bpmf += 'ˇ'; else if (tone === '4') bpmf += 'ˋ'; else if (tone === '0') bpmf = '˙' + bpmf;
+                            result.push({ char: char, bpmf: bpmf, type: 'char' });
+                        } catch(e) {
                             result.push({ char: char, bpmf: '', type: 'char' });
-                            continue;
                         }
-                        let pyStr = pyRes[0];
-                        let m = pyStr.toLowerCase().match(/([a-z]+)(\d)?/);
-                        if (!m) {
-                            result.push({ char: char, bpmf: '', type: 'char' });
-                            continue;
-                        }
-                        let py = m[1].replace('ü', 'v');
-                        let tone = m[2] || '1';
-                        let bpmf = py2bpmf[py] || '';
-                        
-                        if (!bpmf) {
-                            result.push({ char: char, bpmf: '', type: 'char' });
-                            continue;
-                        }
-                        if (tone === '2') bpmf += 'ˊ'; else if (tone === '3') bpmf += 'ˇ'; else if (tone === '4') bpmf += 'ˋ'; else if (tone === '0') bpmf = '˙' + bpmf;
-                        result.push({ char: char, bpmf: bpmf, type: 'char' });
-                    } catch(e) {
-                        result.push({ char: char, bpmf: '', type: 'char' });
                     }
                 }
             }
@@ -593,6 +613,9 @@
             (rubyData || []).forEach(r => {
                 if (r.type === 'eng-num') htmlStr += `<span class="eng-num">${r.char}</span>`;
                 else if (r.type === 'punct') htmlStr += `<span class="punct">${r.char}</span>`;
+                else if (r.type === 'bopomofo-char') {
+                    htmlStr += `<span class="bopomofo-char" style="display: inline-block; vertical-align: middle;">${r.char}</span>`;
+                }
                 else if (r.type === 'char') {
                     if (r.bpmf && currentWritingMode === 'vertical') {
                         let sym = r.bpmf; let tone = ''; let isLight = false;
@@ -601,8 +624,11 @@
                         const symHtml = sym.split('').map(c => `<span>${c}</span>`).join('');
                         let extraClass = 'has-ruby' + (isLight ? ' has-light-tone' : '');
                         htmlStr += `<span class="moe-char-vert ${extraClass}"><span class="moe-rb">${r.char}</span><span class="moe-rt">${isLight ? `<span class="tone-light">˙</span>` : ''}<span class="sym">${symHtml}</span>${tone && !isLight ? `<span class="tone">${tone}</span>` : ''}</span></span>`;
-                    } else if (r.bpmf && currentWritingMode === 'horizontal') htmlStr += `<ruby><rb>${r.char}</rb><rt>${r.bpmf}</rt></ruby>`;
-                    else htmlStr += (currentWritingMode === 'vertical') ? `<span class="moe-char-vert"><span class="moe-rb">${r.char}</span></span>` : `<span class="char">${r.char}</span>`;
+                    } else if (r.bpmf && currentWritingMode === 'horizontal') {
+                        htmlStr += `<ruby><rb>${r.char}</rb><rt>${r.bpmf}</rt></ruby>`;
+                    } else {
+                        htmlStr += (currentWritingMode === 'vertical') ? `<span class="moe-char-vert"><span class="moe-rb">${r.char}</span></span>` : `<span class="char">${r.char}</span>`;
+                    }
                 }
             });
             return htmlStr;
@@ -684,15 +710,13 @@
         }
 
         function initApp() {
-            // Load Local Data
             const stored = localStorage.getItem(LOCAL_KEY);
             if(stored) allLocalData = JSON.parse(stored);
             
-            // Load Global Settings Local
             const localSettings = localStorage.getItem(GLOBAL_SETTING_KEY);
             if(localSettings) globalSettings = {...globalSettings, ...JSON.parse(localSettings)};
             if (!globalSettings.semesterStartDate) {
-                globalSettings.semesterStartDate = currentDateStr; // default to today
+                globalSettings.semesterStartDate = currentDateStr;
             }
 
             if (typeof firebase !== 'undefined') {
@@ -719,7 +743,6 @@
             els.btnLogin.style.display = 'none';
             els.btnLogout.style.display = 'block';
             
-            // Fetch Global Settings from Cloud
             db.collection('users').doc(u.uid).collection('settings_low').doc('global').get().then(doc => {
                 if(doc.exists) {
                     globalSettings = {...globalSettings, ...doc.data()};
@@ -779,7 +802,6 @@
                 currentData.leaves = data.leaves || {};
                 currentData.checkins = data.checkins || {};
                 
-                // 舊版資料遷移防呆：若原本用 absentSeats 陣列，且 leaves 為空，自動轉為事假
                 if (data.absentSeats && data.absentSeats.length > 0 && Object.keys(currentData.leaves).length === 0) {
                     data.absentSeats.forEach(seat => currentData.leaves[seat] = '事假');
                 }
@@ -811,7 +833,6 @@
             renderDashboardUI();
         }
 
-        // --- 彈跳視窗 (請假管理) ---
         window.openAbsentModal = function() {
             tempLeaves = currentData.leaves ? {...currentData.leaves} : {};
             renderSeatGrid();
@@ -837,7 +858,7 @@
                         delete tempLeaves[i];
                     } else {
                         tempLeaves[i] = selectedType;
-                        if(currentData.checkins && currentData.checkins[i]) delete currentData.checkins[i]; // 請假則清空打卡
+                        if(currentData.checkins && currentData.checkins[i]) delete currentData.checkins[i];
                     }
                     renderSeatGrid();
                 };
@@ -856,7 +877,6 @@
             renderDashboardUI();
         }
 
-        // --- 自助打卡列 (黑板底部) ---
         function renderAttendanceBar() {
             els.attendanceBar.innerHTML = '';
             let totalSeats = 0;
@@ -890,7 +910,6 @@
                 els.attendanceBar.appendChild(seatDiv);
             }
             
-            // 更新黑板上的出缺席文字摘要
             let notArrived = totalSeats - onTimeCount - lateCount - leaveCount;
             let summaryText = "";
             if (leaveCount > 0) summaryText += `請假:${leaveCount}人 `;
@@ -908,7 +927,7 @@
 
         function handleCheckIn(seatNum) {
             if (currentData.leaves && currentData.leaves[seatNum]) return; 
-            if (currentData.checkins && currentData.checkins[seatNum]) return; // 已打卡需靠雙擊取消
+            if (currentData.checkins && currentData.checkins[seatNum]) return; 
 
             let now = new Date();
             let timeStr = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
@@ -917,7 +936,7 @@
             if (!currentData.checkins) currentData.checkins = {};
             currentData.checkins[seatNum] = status;
             
-            saveData(); // 儲存並重新渲染
+            saveData();
         }
 
         function handleCancelCheckIn(seatNum) {
@@ -928,7 +947,6 @@
             }
         }
 
-        // --- 統計報表 ---
         window.openStatsModal = async function() {
             document.getElementById('stats-modal').style.display = 'flex';
             document.getElementById('stats-date-range').textContent = `${globalSettings.semesterStartDate} ~ 至今`;
@@ -953,7 +971,6 @@
             const todayStr = new Date().toISOString().slice(0,10);
             for (const [date, data] of Object.entries(records)) {
                 if (date >= globalSettings.semesterStartDate && date <= todayStr) {
-                    // 打卡統計
                     if(data.checkins) {
                         for(const [seat, status] of Object.entries(data.checkins)) {
                             if(stats[seat]) {
@@ -962,7 +979,6 @@
                             }
                         }
                     }
-                    // 請假統計 (含相容舊版陣列)
                     let leaves = data.leaves || {};
                     if(data.absentSeats && data.absentSeats.length > 0 && Object.keys(leaves).length===0) {
                         data.absentSeats.forEach(s => leaves[s] = '事假');
@@ -979,8 +995,6 @@
             }
 
             tbody.innerHTML = '';
-            
-            // 🔥 增加數值為0時顯示淺灰，非0顯示粗體亮色的輔助函數
             const fmt = (val, highlightColor) => {
                 if (val > 0) return `<span style="color:${highlightColor}; font-weight:900; font-size:1.2em;">${val}</span>`;
                 return `<span style="color:#bdc3c7; font-weight:normal;">0</span>`;
@@ -1004,7 +1018,6 @@
         }
         window.closeStatsModal = function() { document.getElementById('stats-modal').style.display = 'none'; }
 
-        // --- 原有顯示更新邏輯 ---
         function renderSetupUI() {
             document.getElementById('duty-input').value = currentData.dutyText || "";
             
@@ -1044,7 +1057,7 @@
             els.dayDisplay.textContent = days[dateObj.getDay()];
             document.getElementById('display-duty').textContent = currentData.dutyText || "無";
             
-            renderAttendanceBar(); // 呼叫自助打卡列繪製
+            renderAttendanceBar(); 
             
             renderBoardList(document.getElementById('display-left-list'), currentData.leftList, "(無提醒)");
             renderBoardList(document.getElementById('display-right-list'), currentData.rightList, "(今日無作業)");
@@ -1067,7 +1080,7 @@
             }
         }
 
-        // --- 工具與其它控制 ---
+        // 👑 完美連動作業繳交紀錄 👑
         window.addItem = function(side) {
             const input = document.getElementById(side + '-input');
             const val = input.value.trim();
@@ -1080,7 +1093,6 @@
                     if(!currentData.rightList) currentData.rightList = [];
                     currentData.rightList.push(newItem);
                     
-                    // --- 🌟 選項 A: 單向同步至作業系統 🌟 ---
                     const syncCheck = document.getElementById('sync-check');
                     if (syncCheck && syncCheck.checked) {
                         const newAssign = {
@@ -1090,15 +1102,11 @@
                         };
                         
                         if (isCloud && user) {
-                            // 使用 arrayUnion 寫入作業系統資料庫
                             db.collection('users').doc(user.uid).collection('daily_records_low').doc(currentDateStr)
-                              .set({
-                                  assignments: firebase.firestore.FieldValue.arrayUnion(newAssign)
-                              }, { merge: true })
+                              .set({ assignments: firebase.firestore.FieldValue.arrayUnion(newAssign) }, { merge: true })
                               .then(() => showSaving("✓ 聯絡簿已同步至作業系統"))
                               .catch(err => console.error("同步失敗", err));
                         } else {
-                            // 單機模式：寫入 localStorage 的 homework_tracker_low_data
                             const LOCAL_HW_KEY = 'homework_tracker_low_data';
                             let hwData = {};
                             try { hwData = JSON.parse(localStorage.getItem(LOCAL_HW_KEY)) || {}; } catch(e){}
@@ -1108,7 +1116,6 @@
                             showSaving("✓ 已本機同步至作業系統");
                         }
                     }
-                    // ------------------------------------------
                 }
                 input.value = ''; saveData(); renderSetupUI(); input.focus();
             }
