@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級電子看板 v10.6 (完美排版與精準注音最終微調版)</title>
+    <title>班級電子看板 v11.0 (完美排版與聲調鎖定版)</title>
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -40,7 +40,7 @@
             overflow: hidden;
         }
 
-        /* 按鈕與基礎元件 */
+        /* --- UI 基礎樣式 --- */
         button { cursor: pointer; border: none; font-weight: 600; padding: 12px 20px; border-radius: 8px; transition: 0.2s; }
         .btn-primary { background: #2980b9; color: #fff; }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
@@ -51,7 +51,6 @@
         .btn-danger { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); padding: 5px 10px; font-size: 0.9em; border: 1px solid var(--danger-color);}
         .btn-danger:hover { background: rgba(231, 76, 60, 0.2); }
         
-        /* 導覽列與卡片 */
         .cloud-bar { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .user-chip { display: flex; align-items: center; gap: 10px; color: #2c3e50; font-weight: bold; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
@@ -125,12 +124,6 @@
         .list-area::-webkit-scrollbar { width: 8px; height: 8px; }
         .list-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
-        .left-panel .list-item-text { font-size: calc(1rem * var(--left-scale)); } 
-        .right-panel .list-item-text { font-size: calc(1rem * var(--right-scale)); }
-
-        .list-item-text { font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); transition: 0.1s; font-size: 1em; }
-        .moe-rb, .list-area.horizontal ruby, .punct, .eng-num, .char { font-size: 1.6em; }
-
         .circle-number {
             background-color: var(--chalk-yellow); color: #1a3c2b;
             min-width: 40px; height: 40px; border-radius: 50%;
@@ -140,75 +133,169 @@
         }
         .right-panel .circle-number { min-width: 50px; height: 50px; font-size: 28px; }
 
-        /* 橫書排版 */
+        /* 👑 核心排版修復：絕對防止重疊與聲調錯位 👑 */
+        
+        /* 基礎字體放大縮小變數綁定 */
+        .left-panel .list-item-text { font-size: calc(1.6rem * var(--left-scale)); } 
+        .right-panel .list-item-text { font-size: calc(1.6rem * var(--right-scale)); }
+
+        .list-item-text { font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); display: inline; line-height: 1; }
+        
+        /* 內部字元全部繼承父層的比例 (不再寫死 1.6em) */
+        .moe-rb, .punct, .eng-num, .char { font-size: 1em; }
+
+        /* --- 橫書排版 --- */
         .list-area.horizontal { display: block; padding-bottom: 20px; }
         .list-area.horizontal .list-item-container { display: flex; align-items: flex-start; margin-bottom: 25px; cursor: pointer; }
         .list-area.horizontal .circle-number { margin-right: 20px; margin-top: 5px; }
         .list-area.horizontal .list-item-text { display: block; line-height: 1.8; letter-spacing: 0.05em; }
         .list-area.horizontal .eng-num, .list-area.horizontal .punct, .list-area.horizontal .char, .list-area.horizontal .bopomofo-char { display: inline-block; }
         ruby { ruby-align: center; }
-        rt { font-size: 0.6em; color: var(--chalk-yellow); font-weight: normal; letter-spacing: -0.05em; font-family: "Bopomofo", "Noto Sans TC", sans-serif; }
+        rt { font-size: 0.4em; color: var(--chalk-yellow); font-weight: normal; letter-spacing: -0.05em; font-family: "Bopomofo", "Noto Sans TC", sans-serif; }
 
-        /* 👑 直書排版 (完全回歸您最穩定的版本，保留空間，不干涉換行) 👑 */
+        /* --- 直書排版 (鋼鐵防護架構) --- */
         .list-area.vertical { 
             writing-mode: vertical-rl; text-orientation: mixed; height: 100%; 
             overflow-x: auto; overflow-y: hidden;
-            /* 加大頂部與右側的 padding 避免注音被切掉 */
             padding-bottom: 20px; padding-top: 40px; padding-right: 60px; box-sizing: border-box; 
         }
-        .list-area.vertical .list-item-container { display: block; margin-left: 3.5em; margin-top: 15px; cursor: pointer; }
+        .list-area.vertical .list-item-container { 
+            display: block; margin-left: 3.5em; margin-top: 15px; cursor: pointer; 
+        }
         .list-area.vertical .circle-number { display: inline-flex; writing-mode: horizontal-tb; vertical-align: middle; margin-bottom: 0.1em; }
-        .list-area.vertical .list-item-text { display: inline; line-height: 2.6; letter-spacing: 0; }
         
-        /* 🔥 修改此處：增加 margin 避免上下注音重疊，將 0.15em 加大到 0.25em，拉開「證」與「同」的垂直距離 */
-        .moe-char-vert { display: inline-block; position: relative; vertical-align: middle; margin: 0.25em 0; box-sizing: border-box; }
-        .list-area.vertical .moe-char-vert.has-light-tone { margin-top: 0.9em; }
-        .moe-rb { display: inline-block; line-height: 1; }
+        /* 1. 國字本體容器：強制保留右側實體空間 (padding-right)，防止下一行靠過來 */
+        .moe-char-vert { 
+            display: inline-block; 
+            position: relative; 
+            vertical-align: middle; 
+            margin: 0.1em 0; 
+            box-sizing: border-box; 
+            padding-right: 1.1em; /* 這是保護注音的實體圍牆！ */
+        }
         
-        /* 使用 top: 50% 和 transform 使注音垂直置中對齊國字 */
-        /* 微調 margin-left 讓注音與國字稍微拉開距離，增加呼吸感 */
-        .moe-rt { position: absolute; writing-mode: horizontal-tb; top: 50%; transform: translateY(-50%); left: 100%; margin-left: 0.15em; display: flex; flex-direction: column; align-items: center; width: 0.8em; }
+        /* 2. 注音軌道：放置在保留的 padding-right 空間內 */
+        .moe-rt { 
+            position: absolute; 
+            top: 0; 
+            right: 0; 
+            width: 1.1em; 
+            height: 100%; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; /* 讓注音相對於國字垂直置中 */
+            writing-mode: horizontal-tb; /* 確保 Flex 排列不受直書干擾 */
+        }
         
-        /* 將 line-height 從 1.25 微調至 1.15，讓三個符號稍微緊湊一點點，避免整個區塊太長 */
-        .moe-rt .sym { display: flex; flex-direction: column; align-items: center; font-size: 0.55em; line-height: 1.15; font-family: "Bopomofo", "Noto Sans TC", sans-serif; color: var(--chalk-yellow); }
-        .moe-rt .sym span { display: block; }
+        /* 3. 【全新機制】注音鎖定艙：將聲符與聲調綁在一起，永不分離 */
+        .bopo-wrapper {
+            position: relative; 
+            display: inline-flex; 
+            flex-direction: column; 
+            align-items: center;
+        }
+        .bopo-wrapper .sym { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            font-size: 0.35em; /* 注音的大小 (相對於 1em 的國字) */
+            line-height: 1.05; 
+            font-family: "Bopomofo", "Noto Sans TC", sans-serif; 
+            color: var(--chalk-yellow); 
+        }
+        .bopo-wrapper .sym span { display: block; }
         
-        /* 🔥 修改此處：微調聲調的底部距離，將 0.15em 提高到 0.35em，使其完美對齊最後一個符號的中央 */
-        .moe-rt .tone { position: absolute; right: -0.65em; top: auto; bottom: 0.35em; transform: none; font-size: 0.6em; font-weight: bold; color: var(--chalk-yellow); line-height: 1; }
-        .moe-rt .tone-light { position: absolute; top: -1em; left: 50%; transform: translateX(-50%); font-size: 0.55em; font-weight: bold; color: var(--chalk-yellow); }
+        /* 4. 聲調精準定位 (以 bopo-wrapper 為基準) */
+        .bopo-wrapper .tone { 
+            position: absolute; 
+            right: -0.85em; /* 緊貼在注音符號的右側 */
+            bottom: 0;      /* 緊貼在最後一個韻符的底部 */
+            font-size: 0.35em; /* 大小與注音符號同步 */
+            font-weight: bold; 
+            color: var(--chalk-yellow); 
+            line-height: 1; 
+        }
+        .bopo-wrapper .tone-light { 
+            position: absolute; 
+            top: -0.85em; /* 緊貼在注音符號的正上方 */
+            left: 50%; 
+            transform: translateX(-50%); 
+            font-size: 0.35em; 
+            font-weight: bold; 
+            color: var(--chalk-yellow); 
+        }
+
+        /* 5. 英數字與標點：加上相同的 padding-right 作為實體防護牆！ */
+        .list-area.vertical .eng-num { 
+            writing-mode: horizontal-tb; 
+            display: inline-block; 
+            font-family: Arial, sans-serif; 
+            font-weight: 900; 
+            white-space: nowrap; 
+            margin: 0.1em 0; 
+            vertical-align: middle; 
+            transform: translateY(0.1em); 
+            padding-right: 1.1em; /* 強制防護！ */
+        }
+        .list-area.vertical .punct { 
+            display: inline-block; 
+            vertical-align: middle; 
+            margin: 0.05em 0; 
+            padding-right: 1.1em; /* 強制防護！ */
+        }
         
-        .list-area.vertical .eng-num { writing-mode: horizontal-tb; display: inline-block; font-family: Arial, sans-serif; font-weight: 900; white-space: nowrap; margin: 0.1em 0; color: var(--chalk-white); vertical-align: middle; transform: translateY(0.1em); }
-        .list-area.vertical .punct { display: inline-block; vertical-align: middle; margin: 0.05em 0; }
-        .list-area.vertical .char { display: inline-block; vertical-align: middle; }
-        
-        /* 👑 顯示模式切換 (純國字 / 純注音) 👑 */
+        /* 👑 顯示模式切換 👑 */
         body.mode-char-only rt, body.mode-char-only .moe-rt { display: none !important; }
         
+        /* 純注音模式 */
         body.mode-bpmf-only rb, body.mode-bpmf-only .moe-rb, body.mode-bpmf-only .char { display: none !important; } 
         body.mode-bpmf-only .eng-num, body.mode-bpmf-only .punct { color: var(--chalk-white) !important; display: inline-block !important; }
         
-        body.mode-bpmf-only .moe-char-vert { margin: 0.05em 0.1em; } 
-        body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-ruby { border: 2px solid #5dade2; border-radius: 8px; padding: 0.1em 1.1em 0.25em 0.2em; box-sizing: border-box; background-color: transparent; }
-        body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-light-tone { padding-top: 1.3em; }
-        
-        /* 修改此處：在純注音模式下，取消置中對齊，恢復到框框的預設位置 */
-        body.mode-bpmf-only .moe-rt { position: relative; left: 0; margin-left: 0; top: 0 !important; transform: none; }
-        body.mode-bpmf-only .moe-rt .sym { font-size: 1.2em; color: var(--chalk-white); line-height: 1.15; }
-        /* 純注音模式下，聲調同樣跟隨置底調整 */
-        body.mode-bpmf-only .moe-rt .tone { font-size: 1.2em; right: -0.7em; color: var(--chalk-white); top: auto; bottom: 0.15em; transform: none; } 
-        body.mode-bpmf-only .moe-rt .tone-light { font-size: 1.2em; top: -0.8em; color: var(--chalk-white); transform: translateX(-50%); }
-        body.mode-bpmf-only .list-area.horizontal ruby { border: 2px solid #5dade2; border-radius: 8px; padding: 4px 6px; margin: 0 4px; display: inline-block; line-height: 1.2; }
-        body.mode-bpmf-only .list-area.horizontal rt { font-size: 1.1em; color: var(--chalk-white); line-height: 1.5; }
+        /* 【修正 1：純注音模式下，卸除英數字的防護牆使其居中歸位】 */
+        body.mode-bpmf-only .list-area.vertical .eng-num,
+        body.mode-bpmf-only .list-area.vertical .punct {
+            padding-right: 0;
+            transform: translateY(0);
+            margin: 0.2em 0;
+        }
 
-        /* 👑 隱藏一般模式下原生注音字元旁邊的空注音框 👑 */
+        body.mode-bpmf-only .moe-char-vert { padding-right: 0; margin: 0.1em 0; } 
+        
+        /* 【修正 2：加寬藍色外框內部空間 (Padding)，徹底包覆聲調】 */
+        body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-ruby { 
+            border: 2px solid #5dade2; 
+            border-radius: 8px; 
+            /* 調整 padding: 上 右 下 左。右側加到 0.9em 確保聲調不超框 */
+            padding: 0.2em 0.9em 0.25em 0.2em; 
+            box-sizing: border-box; 
+            background-color: transparent; 
+            height: auto;
+        }
+        /* 如果有輕聲，上方額外加高確保輕聲點不超框 */
+        body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-light-tone { 
+            padding-top: 0.9em; 
+        }
+
+        body.mode-bpmf-only .moe-rt { position: static; width: auto; height: auto; display: inline-flex; }
+        
+        /* 純注音模式下，注音字體放大以填補國字消失的空間 */
+        body.mode-bpmf-only .bopo-wrapper .sym { font-size: 1em; color: var(--chalk-white); }
+        /* 聲調維持位置，由外框的 padding 負責包覆 */
+        body.mode-bpmf-only .bopo-wrapper .tone { font-size: 1em; right: -0.7em; bottom: 0; color: var(--chalk-white); } 
+        body.mode-bpmf-only .bopo-wrapper .tone-light { font-size: 1em; top: -0.85em; color: var(--chalk-white); }
+        
+        body.mode-bpmf-only .list-area.horizontal ruby { border: 2px solid #5dade2; border-radius: 8px; padding: 4px 6px; margin: 0 4px; display: inline-block; line-height: 1.2; }
+        body.mode-bpmf-only .list-area.horizontal rt { font-size: 1em; color: var(--chalk-white); line-height: 1.5; }
+
+        /* 隱藏一般模式下原生注音字元 (ㄅ本的ㄅ) 旁邊的空注音框 */
         body:not(.mode-bpmf-only) .bopomofo-only-char .moe-rt,
         body:not(.mode-bpmf-only) ruby.bopomofo-only-char rt { display: none !important; }
 
+        /* --- 其餘版面設定 --- */
         .duty-section { margin-top: auto; padding-top: 20px; border-top: 2px dashed rgba(255,255,255,0.3); background: rgba(0,0,0,0.1); padding: 20px; border-radius: 8px; }
         .duty-label { font-size: 1.2em; opacity: 0.8; margin-bottom: 8px; display: block; }
         .duty-content { font-size: calc(1.8em * var(--left-scale)); font-weight: 700; color: var(--chalk-yellow); text-shadow: var(--chalk-shadow); letter-spacing: 1px; }
 
-        /* 標頭資訊 */
         .top-info-bar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
         .date-navigator { display: flex; align-items: center; gap: 15px; }
         .nav-btn { background: rgba(255,255,255,0.1); color: var(--chalk-white); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; font-size: 1.2em; cursor: pointer; transition: 0.2s; padding: 0; }
@@ -220,7 +307,7 @@
         .digital-clock { font-size: 2.5em; font-weight: 700; font-family: 'Noto Sans TC', monospace; line-height: 1; color: rgba(255,255,255,0.9); white-space: pre-line;}
         .absentee-text { font-size: 1.8em; color: #ff6b6b; font-weight: bold; text-shadow: var(--chalk-shadow); max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 👑 自助打卡列專屬樣式 (緊湊無捲動條設計) */
+        /* 自助打卡列專屬樣式 */
         .attendance-bar-wrapper {
             background: rgba(0,0,0,0.25);
             border-radius: 8px;
@@ -269,9 +356,8 @@
         #loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; color:#333; font-weight:bold; }
 
         /* Modals */
-        /* 修復表頭穿透問題，確保 Modal 在隱藏時完全不會干擾畫面 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(3px);}
-        .modal-content { background: #fff; color: #333; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; z-index: 2001;}
+        .modal-content { background: #fff; color: #333; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
         .modal-content-large { max-width: 900px; padding: 40px; border-radius: 20px;}
         .seat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(55px, 1fr)); gap: 10px; margin-top: 15px; margin-bottom: 20px;}
         .seat-btn { padding: 10px 5px; border-radius: 8px; border: 2px solid #ecf0f1; background: #f8f9fa; cursor: pointer; font-weight: bold; text-align: center; transition: 0.1s; font-size: 1.1rem; color: #2c3e50;}
@@ -279,6 +365,10 @@
         .seat-btn.leave-selected { background: #e74c3c; color: white; border-color: #c0392b; transform: scale(1.05); box-shadow: 0 4px 10px rgba(231,76,60,0.3);}
         .seat-btn small { display: block; font-size: 0.7em; opacity: 0.9; margin-top: 2px; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 15px;}
+
+        /* 自訂輸入框 Modal (取代原生的 prompt 以防瀏覽器阻擋) */
+        #custom-prompt-modal .modal-content { max-width: 400px; }
+        #prompt-input { width: 100%; padding: 12px; margin-top: 15px; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 1.1rem; }
 
         /* 進階注音編輯器 */
         .ruby-edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; margin-top: 25px; margin-bottom: 30px;}
@@ -307,7 +397,7 @@
     <!-- Setup Screen -->
     <div id="setup-screen" class="app-screen active">
         <div class="container">
-            <div class="header"><h1>🏫 班級電子看板 v10.6 (完美排版與精準注音最終微調版)</h1></div>
+            <div class="header"><h1>🏫 班級電子看板 v11.0 (完美排版與聲調鎖定版)</h1></div>
             
             <div class="cloud-bar">
                 <div class="user-chip">
@@ -466,6 +556,18 @@
             </div>
         </div>
     </div>
+    
+    <!-- 自訂文字輸入 Prompt Modal -->
+    <div id="custom-prompt-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 id="prompt-title" style="margin-top:0; color:#2c3e50; font-size:1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px;">請修改內容：</h3>
+            <input type="text" id="prompt-input">
+            <div class="modal-actions" style="margin-top:20px;">
+                <button class="btn-secondary" onclick="closePromptModal()">取消</button>
+                <button class="btn-primary" onclick="confirmPromptModal()">確認修改</button>
+            </div>
+        </div>
+    </div>
 
     <!-- 黑板主畫面 -->
     <div id="dashboard-screen" class="app-screen">
@@ -621,24 +723,38 @@
         function getRubyHTMLFromData(rubyData, currentWritingMode) {
             let htmlStr = "";
             (rubyData || []).forEach(r => {
-                if (r.type === 'eng-num') htmlStr += `<span class="eng-num">${r.char}</span>`;
-                else if (r.type === 'punct') htmlStr += `<span class="punct">${r.char}</span>`;
-                else if (r.type === 'char') {
+                if (r.type === 'eng-num') {
+                    htmlStr += `<span class="eng-num">${r.char}</span>`;
+                } else if (r.type === 'punct') {
+                    htmlStr += `<span class="punct">${r.char}</span>`;
+                } else if (r.type === 'char') {
                     if (r.bpmf && currentWritingMode === 'vertical') {
                         let sym = r.bpmf; let tone = ''; let isLight = false;
                         if (sym.startsWith('˙')) { isLight = true; sym = sym.substring(1); tone = '˙'; }
-                        else { const last = sym.slice(-1); if (['ˊ','ˇ','ˋ'].includes(last)) { tone = last; sym = sym.slice(0, -1); } }
+                        else { 
+                            const last = sym.slice(-1); 
+                            if (['ˊ','ˇ','ˋ'].includes(last)) { tone = last; sym = sym.slice(0, -1); } 
+                        }
                         const symHtml = sym.split('').map(c => `<span>${c}</span>`).join('');
                         
-                        // 針對原本就是注音的字元，加上特定 class 來防呆隱藏空白框
                         let extraClass = 'has-ruby' + (isLight ? ' has-light-tone' : '') + (r.isBopomofoOnly ? ' bopomofo-only-char' : '');
                         
-                        htmlStr += `<span class="moe-char-vert ${extraClass}"><span class="moe-rb">${r.char}</span><span class="moe-rt">${isLight ? `<span class="tone-light">˙</span>` : ''}<span class="sym">${symHtml}</span>${tone && !isLight ? `<span class="tone">${tone}</span>` : ''}</span></span>`;
+                        // ✨ 終極版注音包裝結構 (bopo-wrapper) ✨
+                        htmlStr += `<span class="moe-char-vert ${extraClass}">
+                            <span class="moe-rb">${r.char}</span>
+                            <span class="moe-rt">
+                                <span class="bopo-wrapper">
+                                    ${isLight ? `<span class="tone-light">˙</span>` : ''}
+                                    <span class="sym">${symHtml}</span>
+                                    ${tone && !isLight ? `<span class="tone">${tone}</span>` : ''}
+                                </span>
+                            </span>
+                        </span>`;
                     } else if (r.bpmf && currentWritingMode === 'horizontal') {
                         let extraClass = r.isBopomofoOnly ? ' class="bopomofo-only-char"' : '';
                         htmlStr += `<ruby${extraClass}><rb>${r.char}</rb><rt>${r.bpmf}</rt></ruby>`;
                     } else {
-                        htmlStr += (currentWritingMode === 'vertical') ? `<span class="moe-char-vert"><span class="moe-rb">${r.char}</span></span>` : `<span class="char">${r.char}</span>`;
+                        htmlStr += (currentWritingMode === 'vertical') ? `<span class="moe-char-vert no-ruby"><span class="moe-rb">${r.char}</span></span>` : `<span class="char">${r.char}</span>`;
                     }
                 }
             });
@@ -678,6 +794,7 @@
 
         let editingSide = null;
         let editingIndex = null;
+        let promptCallback = null;
 
         // --- DOM ---
         const els = {
@@ -700,7 +817,9 @@
             resizer: document.getElementById('resizer'),
             absentModal: document.getElementById('absent-modal'),
             seatGrid: document.getElementById('seat-grid'),
-            attendanceBar: document.getElementById('attendance-bar')
+            attendanceBar: document.getElementById('attendance-bar'),
+            promptModal: document.getElementById('custom-prompt-modal'),
+            promptInput: document.getElementById('prompt-input')
         };
 
         window.onload = () => {
@@ -1135,14 +1254,41 @@
             if(side === 'left') currentData.leftList.splice(idx, 1); else currentData.rightList.splice(idx, 1);
             saveData(); renderSetupUI();
         }
+
+        // 使用 Modal 取代原生 prompt
         window.editItemText = function(side, idx) {
             const list = side === 'left' ? currentData.leftList : currentData.rightList;
-            const newVal = prompt('請修改內容：', list[idx].rawText);
-            if (newVal !== null && newVal.trim() !== '') {
-                list[idx].rawText = newVal.trim(); list[idx].rubyData = generateRubyData(newVal.trim());
-                saveData(); renderSetupUI();
-            }
+            els.promptInput.value = list[idx].rawText;
+            els.promptModal.style.display = 'flex';
+            els.promptInput.focus();
+
+            promptCallback = function(newVal) {
+                if (newVal !== null && newVal.trim() !== '') {
+                    list[idx].rawText = newVal.trim(); 
+                    list[idx].rubyData = generateRubyData(newVal.trim());
+                    saveData(); renderSetupUI();
+                }
+            };
         }
+
+        window.closePromptModal = function() {
+            els.promptModal.style.display = 'none';
+            promptCallback = null;
+        }
+
+        window.confirmPromptModal = function() {
+            if (promptCallback) {
+                promptCallback(els.promptInput.value);
+            }
+            closePromptModal();
+        }
+
+        els.promptInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                confirmPromptModal();
+            }
+        });
+
         window.handleEnter = function(e, side) { if(e.key === 'Enter') window.addItem(side); }
         window.navDate = function(delta) {
             const d = new Date(currentDateStr); d.setDate(d.getDate() + delta);
@@ -1152,7 +1298,7 @@
         els.setupDatePicker.addEventListener('change', (e) => loadDataForDate(e.target.value));
         document.getElementById('duty-input').addEventListener('change', () => { currentData.dutyText = document.getElementById('duty-input').value; saveData(); });
 
-        window.doLogin = function() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => alert(e.message)); }
+        window.doLogin = function() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => console.error(e.message)); }
         window.doLogout = function() { auth.signOut(); }
 
         function showSaving(msg = "✓ 已儲存") { els.saveIndicator.textContent = msg; els.saveIndicator.classList.add('show'); setTimeout(() => els.saveIndicator.classList.remove('show'), 2000); }
@@ -1168,7 +1314,7 @@
             if (els.digitalClock) els.digitalClock.textContent = `${ampm} ${h12.toString().padStart(2,'0')}:${m}`;
         }
 
-        // 版面控制
+        // 版面控制 (放大縮小)
         function applyFontScales() { document.documentElement.style.setProperty('--left-scale', leftFontScale); document.documentElement.style.setProperty('--right-scale', rightFontScale); }
         window.adjustFont = function(side, delta) {
             if (side === 'left') { leftFontScale = Math.max(0.5, Math.min(2.5, leftFontScale + delta)); localStorage.setItem('board_left_scale_low', leftFontScale); } 
