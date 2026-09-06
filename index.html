@@ -711,9 +711,26 @@
         function upgradeDataStructure(list) {
             if (!list) return [];
             return list.map(item => {
-                // 強制所有資料 (無論新舊) 重新解析一次，確保補上 isBopomofoOnly 標記！
-                const rawText = (typeof item === 'string') ? item : (item.rawText || "");
-                return { rawText: rawText, rubyData: generateRubyData(rawText) };
+                if (typeof item === 'string') return { rawText: item, rubyData: generateRubyData(item) };
+                else if (item && typeof item === 'object') {
+                    // 如果沒有 rubyData (極舊格式)，就重新生成
+                    if (!item.rubyData) {
+                        item.rubyData = generateRubyData(item.rawText || "");
+                    } else {
+                        // 🌟 關鍵修復：保留手動修改的注音，只針對舊資料補上 isBopomofoOnly 標記！
+                        const isBopomofo = (char) => {
+                            const code = char.charCodeAt(0);
+                            return (code >= 0x3100 && code <= 0x312F) || (code >= 0x31A0 && code <= 0x31BA);
+                        };
+                        item.rubyData.forEach(rObj => {
+                            if (rObj.type === 'char' && isBopomofo(rObj.char) && !rObj.hasOwnProperty('isBopomofoOnly')) {
+                                rObj.isBopomofoOnly = true;
+                            }
+                        });
+                    }
+                    return item;
+                }
+                return { rawText: '', rubyData: [] };
             });
         }
 
