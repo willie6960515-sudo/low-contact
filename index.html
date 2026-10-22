@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>班級電子看板 v11.0 (完美排版與聲調鎖定版)</title>
+    <title>班級電子看板（三欄直式方格與聲調鎖定版）</title>
     
-    <!-- Firebase SDK -->
+    <!-- 雲端資料庫套件 -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
-    <!-- 載入 pinyin-pro -->
+    <!-- 載入注音轉換核心 -->
     <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.24.2/dist/index.js"></script>
 
     <style>
@@ -21,13 +21,14 @@
             --board-frame: #8d5e3c;
             --chalk-white: #f0f0f0;
             --chalk-yellow: #f1c40f;
-            --chalk-shadow: 2px 2px 0px rgba(0,0,0,0.15);
+            --chalk-shadow: 2px 2px 0px rgba(0,0,0,0.18);
             --accent-color: #f39c12; 
             --danger-color: #e74c3c;
             --nav-btn-hover: rgba(255,255,255,0.15);
-            /* Font Scaling Variables */
-            --left-scale: 1;
-            --right-scale: 1.4;
+            /* 三欄獨立方格縮放變數 */
+            --morning-scale: 1.05;
+            --left-scale: 1.05;
+            --right-scale: 1.15;
         }
 
         * { box-sizing: border-box; }
@@ -40,15 +41,15 @@
             overflow: hidden;
         }
 
-        /* --- UI 基礎樣式 --- */
-        button { cursor: pointer; border: none; font-weight: 600; padding: 12px 20px; border-radius: 8px; transition: 0.2s; }
+        /* --- 基礎按鈕樣式 --- */
+        button { cursor: pointer; border: none; font-weight: 700; padding: 10px 18px; border-radius: 8px; transition: 0.2s; font-family: inherit; }
         .btn-primary { background: #2980b9; color: #fff; }
         .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
         .btn-secondary { background: #bdc3c7; color: #2c3e50; }
         .btn-secondary:hover { background: #aab7b8; }
-        .btn-edit { background: rgba(243, 156, 18, 0.1); color: #d35400; padding: 5px 10px; font-size: 0.9em; border: 1px solid #f39c12; }
+        .btn-edit { background: rgba(243, 156, 18, 0.1); color: #d35400; padding: 6px 12px; font-size: 0.95em; border: 1px solid #f39c12; }
         .btn-edit:hover { background: rgba(243, 156, 18, 0.2); }
-        .btn-danger { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); padding: 5px 10px; font-size: 0.9em; border: 1px solid var(--danger-color);}
+        .btn-danger { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); padding: 6px 12px; font-size: 0.95em; border: 1px solid var(--danger-color);}
         .btn-danger:hover { background: rgba(231, 76, 60, 0.2); }
         
         .cloud-bar { background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 12px; border: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
@@ -59,19 +60,20 @@
         .btn-google:hover { background: #f8f9fa; }
 
         .app-screen { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; overflow-y: auto; }
-        .app-screen.active { display: block; animation: fadeIn 0.5s ease; }
+        .app-screen.active { display: block; animation: fadeIn 0.35s ease; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+        /* --- 後台設定畫面 --- */
         #setup-screen { background: #f4f6f7; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center;}
-        .setup-card { background: #fff; padding: 40px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; position: relative; }
-        .header h1 { text-align: center; color: #2c3e50; margin-bottom: 10px; font-weight: 900;}
+        .container { max-width: 960px; margin: 0 auto; padding: 35px 20px; min-height: 100vh; display: flex; flex-direction: column; justify-content: center;}
+        .setup-card { background: #fff; padding: 35px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); border: 1px solid #e0e0e0; position: relative; }
+        .header h1 { text-align: center; color: #2c3e50; margin-bottom: 15px; font-weight: 900;}
         
-        .date-control { background: #eaf2f8; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid #d6eaf8; }
-        .date-control input[type="date"] { font-size: 1.2rem; color: #2980b9; font-weight: bold; padding: 8px; border: 2px solid #2980b9; }
-        .nav-btn-setup { background: rgba(41, 128, 185, 0.1); color: #2980b9; border: 1px solid rgba(41, 128, 185, 0.3); border-radius: 8px; width: 36px; height: 36px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer; transition: 0.2s; padding: 0; }
+        .date-control { background: #eaf2f8; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; border: 1px solid #d6eaf8; flex-wrap: wrap; }
+        .date-control input[type="date"] { font-size: 1.2rem; color: #2980b9; font-weight: bold; padding: 8px; border: 2px solid #2980b9; border-radius: 6px; }
+        .nav-btn-setup { background: rgba(41, 128, 185, 0.1); color: #2980b9; border: 1px solid rgba(41, 128, 185, 0.3); border-radius: 8px; width: 38px; height: 38px; display: flex; justify-content: center; align-items: center; font-size: 1.2rem; cursor: pointer; transition: 0.2s; padding: 0; }
         .nav-btn-setup:hover { background: rgba(41, 128, 185, 0.2); transform: scale(1.05); }
-        .save-indicator { font-size: 0.9em; color: #27ae60; font-weight: bold; opacity: 0; transition: opacity 0.5s; }
+        .save-indicator { font-size: 0.95em; color: #27ae60; font-weight: bold; opacity: 0; transition: opacity 0.5s; }
         .save-indicator.show { opacity: 1; }
 
         .control-group { margin-bottom: 25px; }
@@ -80,238 +82,505 @@
         input:focus { border-color: #2980b9; outline: none; }
         
         .input-row { display: flex; gap: 10px; }
-        .setup-list { margin-top: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .setup-list-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px 15px; border-radius: 6px; border: 1px solid #eee; }
+        .setup-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+        .setup-list-item { display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; padding: 10px 15px; border-radius: 8px; border: 1px solid #eee; gap: 10px; flex-wrap: wrap; }
 
-        .sync-option { display: flex; align-items: center; margin-top: 8px; color: #e67e22; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
+        .sync-option { display: flex; align-items: center; margin-top: 8px; color: #e67e22; font-weight: bold; font-size: 0.95rem; cursor: pointer; border-left: none !important; padding-left: 0 !important; }
         .sync-option input { width: auto; margin-right: 8px; cursor: pointer; transform: scale(1.2); }
 
-        /* Dashboard 黑板畫面 */
+        /* --- 黑板主畫面 --- */
         #dashboard-screen { 
             background-color: var(--board-bg);
             background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
             background-size: 50px 50px;
-            border: 20px solid var(--board-frame);
+            border: 18px solid var(--board-frame);
             border-radius: 8px;
             box-shadow: inset 0 0 50px rgba(0,0,0,0.5);
-            padding: 30px; padding-bottom: 15px; height: 100vh; width: 100vw; box-sizing: border-box; display: none; 
+            padding: 16px 24px 12px 24px;
+            height: 100vh;
+            width: 100vw;
+            box-sizing: border-box;
+            display: none; 
         }
-        #dashboard-screen.active { display: flex; flex-direction: column; }
-        
-        .dashboard-layout { display: flex; flex-grow: 1; height: calc(100% - 90px); overflow: hidden; margin-bottom: 10px;}
-        .chalk-panel { display: flex; flex-direction: column; height: 100%; overflow: hidden; position: relative; }
-        .left-panel { flex-shrink: 0; padding-right: 25px; }
-        .right-panel { flex-grow: 1; padding-left: 25px; }
+        #dashboard-screen.active { display: flex; flex-direction: column; gap: 10px; }
 
-        .resizer { width: 16px; margin: 0 -8px; cursor: col-resize; display: flex; justify-content: center; align-items: center; z-index: 10; transition: background 0.2s; border-radius: 8px; }
-        .resizer:hover, .resizer.dragging { background: rgba(255,255,255,0.1); }
-        .resizer-line { width: 4px; height: 50px; background: rgba(255,255,255,0.3); border-radius: 2px; }
-
-        .panel-header-container { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 2px dashed rgba(255,255,255,0.2); padding-bottom: 10px; position: relative; z-index: 20; }
-        .panel-header-container.big-title { border-bottom: 3px solid rgba(255,255,255,0.3); margin-bottom: 20px; }
-        .panel-header { font-size: 1.8em; font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); }
-        .right-panel .panel-header-container.big-title .panel-header { font-size: 2.5em; }
-
-        .global-controls-wrapper { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 0 auto; }
-        .global-controls-wrapper button { background: rgba(255,255,255,0.15); color: var(--chalk-white); border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); height: 34px; padding: 0 12px; font-size: 0.95rem; font-weight: bold; transition: 0.3s; cursor: pointer; backdrop-filter: blur(2px); }
-        .global-controls-wrapper button:hover { background: rgba(255,255,255,0.9); color: #1a3c2b; }
-
-        .font-adjust-btns { display: flex; gap: 5px; margin-bottom: 5px;}
-        .font-adjust-btns button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 2px 10px; border-radius: 6px; font-size: 1rem; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .font-adjust-btns button:hover { background: rgba(255,255,255,0.3); transform: scale(1.05);}
-        
-        .list-area { flex-grow: 1; overflow: auto; padding-right: 15px; position: relative; z-index: 10; }
-        .list-area::-webkit-scrollbar { width: 8px; height: 8px; }
-        .list-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
-
-        .circle-number {
-            background-color: var(--chalk-yellow); color: #1a3c2b;
-            min-width: 40px; height: 40px; border-radius: 50%;
-            display: flex; justify-content: center; align-items: center;
-            font-size: 24px; font-weight: 900; 
-            box-shadow: 2px 2px 5px rgba(0,0,0,0.3); flex-shrink: 0; text-shadow: none;
-        }
-        .right-panel .circle-number { min-width: 50px; height: 50px; font-size: 28px; }
-
-        /* 👑 核心排版修復：絕對防止重疊與聲調錯位 👑 */
-        
-        /* 基礎字體放大縮小變數綁定 */
-        .left-panel .list-item-text { font-size: calc(1.6rem * var(--left-scale)); } 
-        .right-panel .list-item-text { font-size: calc(1.6rem * var(--right-scale)); }
-
-        .list-item-text { font-weight: 700; color: var(--chalk-white); text-shadow: var(--chalk-shadow); display: inline; line-height: 1; }
-        
-        /* 內部字元全部繼承父層的比例 (不再寫死 1.6em) */
-        .moe-rb, .punct, .eng-num, .char { font-size: 1em; }
-
-        /* --- 橫書排版 --- */
-        .list-area.horizontal { display: block; padding-bottom: 20px; }
-        .list-area.horizontal .list-item-container { display: flex; align-items: flex-start; margin-bottom: 25px; cursor: pointer; }
-        .list-area.horizontal .circle-number { margin-right: 20px; margin-top: 5px; }
-        .list-area.horizontal .list-item-text { display: block; line-height: 1.8; letter-spacing: 0.05em; }
-        .list-area.horizontal .eng-num, .list-area.horizontal .punct, .list-area.horizontal .char, .list-area.horizontal .bopomofo-char { display: inline-block; }
-        ruby { ruby-align: center; }
-        rt { font-size: 0.4em; color: var(--chalk-yellow); font-weight: normal; letter-spacing: -0.05em; font-family: "Bopomofo", "Noto Sans TC", sans-serif; }
-
-        /* --- 直書排版 (鋼鐵防護架構) --- */
-        .list-area.vertical { 
-            writing-mode: vertical-rl; text-orientation: mixed; height: 100%; 
-            overflow-x: auto; overflow-y: hidden;
-            padding-bottom: 20px; padding-top: 40px; padding-right: 60px; box-sizing: border-box; 
-        }
-        .list-area.vertical .list-item-container { 
-            display: block; margin-left: 3.5em; margin-top: 15px; cursor: pointer; 
-        }
-        .list-area.vertical .circle-number { display: inline-flex; writing-mode: horizontal-tb; vertical-align: middle; margin-bottom: 0.1em; }
-        
-        /* 1. 國字本體容器：強制保留右側實體空間 (padding-right)，防止下一行靠過來 */
-        .moe-char-vert { 
-            display: inline-block; 
-            position: relative; 
-            vertical-align: middle; 
-            margin: 0.1em 0; 
-            box-sizing: border-box; 
-            padding-right: 1.1em; /* 這是保護注音的實體圍牆！ */
-        }
-        
-        /* 2. 注音軌道：放置在保留的 padding-right 空間內 */
-        .moe-rt { 
-            position: absolute; 
-            top: 0; 
-            right: 0; 
-            width: 1.1em; 
-            height: 100%; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; /* 讓注音相對於國字垂直置中 */
-            writing-mode: horizontal-tb; /* 確保 Flex 排列不受直書干擾 */
-        }
-        
-        /* 3. 【全新機制】注音鎖定艙：將聲符與聲調綁在一起，永不分離 */
-        .bopo-wrapper {
-            position: relative; 
-            display: inline-flex; 
-            flex-direction: column; 
+        /* 頂部資訊與全域控制列（整合日期、請假、精簡版值日生、三區開關、時鐘） */
+        .top-info-bar {
+            display: flex;
             align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            padding: 8px 14px;
+            background: rgba(0, 0, 0, 0.22);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 10px;
+            flex-shrink: 0;
         }
-        .bopo-wrapper .sym { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            font-size: 0.35em; /* 注音的大小 (相對於 1em 的國字) */
-            line-height: 1.05; 
-            font-family: "Bopomofo", "Noto Sans TC", sans-serif; 
-            color: var(--chalk-yellow); 
+        .info-left-group {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
         }
-        .bopo-wrapper .sym span { display: block; }
-        
-        /* 4. 聲調精準定位 (以 bopo-wrapper 為基準) */
-        .bopo-wrapper .tone { 
-            position: absolute; 
-            right: -0.85em; /* 緊貼在注音符號的右側 */
-            bottom: 0;      /* 緊貼在最後一個韻符的底部 */
-            font-size: 0.35em; /* 大小與注音符號同步 */
-            font-weight: bold; 
-            color: var(--chalk-yellow); 
-            line-height: 1; 
+        .date-navigator { display: flex; align-items: center; gap: 10px; }
+        .nav-btn { background: rgba(255,255,255,0.12); color: var(--chalk-white); border: 1px solid rgba(255,255,255,0.25); border-radius: 50%; width: 38px; height: 38px; display: flex; justify-content: center; align-items: center; font-size: 1.1em; cursor: pointer; transition: 0.2s; padding: 0; }
+        .nav-btn:hover { background: var(--nav-btn-hover); transform: scale(1.08); }
+        .date-display-group { display: flex; align-items: baseline; gap: 8px; }
+        .date-display { font-size: 1.45em; color: var(--chalk-yellow); font-weight: 900; letter-spacing: 1px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); }
+        .date-sub { font-size: 1.1em; color: rgba(255,255,255,0.85); font-weight: 700; }
+
+        /* 極簡醒目版：今日值日生與出缺席標籤 */
+        .top-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 1.15rem;
+            font-weight: 900;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
         }
-        .bopo-wrapper .tone-light { 
-            position: absolute; 
-            top: -0.85em; /* 緊貼在注音符號的正上方 */
-            left: 50%; 
-            transform: translateX(-50%); 
-            font-size: 0.35em; 
-            font-weight: bold; 
-            color: var(--chalk-yellow); 
+        .duty-badge {
+            color: var(--chalk-yellow);
+            background: rgba(241, 196, 15, 0.14);
+            border-color: rgba(241, 196, 15, 0.4);
+        }
+        .absentee-text {
+            font-size: 1.2rem;
+            color: #ff7675;
+            font-weight: 900;
+            text-shadow: var(--chalk-shadow);
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
-        /* 5. 英數字與標點：加上相同的 padding-right 作為實體防護牆！ */
-        .list-area.vertical .eng-num { 
-            writing-mode: horizontal-tb; 
-            display: inline-block; 
-            font-family: Arial, sans-serif; 
-            font-weight: 900; 
-            white-space: nowrap; 
-            margin: 0.1em 0; 
-            vertical-align: middle; 
-            transform: translateY(0.1em); 
-            padding-right: 1.1em; /* 強制防護！ */
+        /* 頂部中間：三欄顯示開關與全域工具 */
+        .global-controls-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+            justify-content: center;
         }
-        .list-area.vertical .punct { 
-            display: inline-block; 
-            vertical-align: middle; 
-            margin: 0.05em 0; 
-            padding-right: 1.1em; /* 強制防護！ */
+        .ctrl-btn {
+            background: rgba(255,255,255,0.14);
+            color: var(--chalk-white);
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.3);
+            height: 36px;
+            padding: 0 11px;
+            font-size: 0.92rem;
+            font-weight: 800;
+            transition: 0.2s;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
         }
+        .ctrl-btn:hover { background: rgba(255,255,255,0.88); color: #1a3c2b; }
         
-        /* 👑 顯示模式切換 👑 */
-        body.mode-char-only rt, body.mode-char-only .moe-rt { display: none !important; }
-        
-        /* 純注音模式 */
-        body.mode-bpmf-only rb, body.mode-bpmf-only .moe-rb, body.mode-bpmf-only .char { display: none !important; } 
-        body.mode-bpmf-only .eng-num, body.mode-bpmf-only .punct { color: var(--chalk-white) !important; display: inline-block !important; }
-        
-        /* 【修正 1：純注音模式下，卸除英數字的防護牆使其居中歸位】 */
-        body.mode-bpmf-only .list-area.vertical .eng-num,
-        body.mode-bpmf-only .list-area.vertical .punct {
-            padding-right: 0;
-            transform: translateY(0);
-            margin: 0.2em 0;
-        }
+        /* 區塊收合開關燈號樣式 */
+        .panel-toggle-btn.active-morning { background: #f39c12; color: #1e272e; border-color: #f1c40f; }
+        .panel-toggle-btn.active-left { background: #27ae60; color: #ffffff; border-color: #2ecc71; }
+        .panel-toggle-btn.active-right { background: #ecf0f1; color: #1e272e; border-color: #bdc3c7; }
+        .panel-toggle-btn.collapsed { opacity: 0.5; background: rgba(0,0,0,0.3); color: #bdc3c7; border-style: dashed; }
 
-        body.mode-bpmf-only .moe-char-vert { padding-right: 0; margin: 0.1em 0; } 
-        
-        /* 【修正 2：加寬藍色外框內部空間 (Padding)，徹底包覆聲調】 */
-        body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-ruby { 
-            border: 2px solid #5dade2; 
-            border-radius: 8px; 
-            /* 調整 padding: 上 右 下 左。右側加到 0.9em 確保聲調不超框 */
-            padding: 0.2em 0.9em 0.25em 0.2em; 
-            box-sizing: border-box; 
-            background-color: transparent; 
-            height: auto;
-        }
-        /* 如果有輕聲，上方額外加高確保輕聲點不超框 */
-        body.mode-bpmf-only .list-area.vertical .moe-char-vert.has-light-tone { 
-            padding-top: 0.9em; 
+        .row-count-control { display: inline-flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; height: 36px; padding: 0 4px; gap: 3px; }
+        .row-count-control span { font-size: 0.9rem; font-weight: 800; padding: 0 5px; color: var(--chalk-yellow); white-space: nowrap; }
+        .row-count-control button { height: 26px !important; padding: 0 7px !important; font-size: 0.9rem !important; background: rgba(255,255,255,0.15); color: #fff; border-radius: 5px; }
+        .row-count-control button:hover { background: rgba(255,255,255,0.35); }
+
+        .digital-clock { font-size: 1.8em; font-weight: 900; font-family: 'Noto Sans TC', monospace; line-height: 1; color: rgba(255,255,255,0.95); white-space: nowrap; }
+
+        /* --- 三欄主區域佈局 --- */
+        .dashboard-layout {
+            display: flex;
+            flex-grow: 1;
+            min-height: 0;
+            width: 100%;
+            overflow: hidden;
+            align-items: stretch;
         }
 
-        body.mode-bpmf-only .moe-rt { position: static; width: auto; height: auto; display: inline-flex; }
-        
-        /* 純注音模式下，注音字體放大以填補國字消失的空間 */
-        body.mode-bpmf-only .bopo-wrapper .sym { font-size: 1em; color: var(--chalk-white); }
-        /* 聲調維持位置，由外框的 padding 負責包覆 */
-        body.mode-bpmf-only .bopo-wrapper .tone { font-size: 1em; right: -0.7em; bottom: 0; color: var(--chalk-white); } 
-        body.mode-bpmf-only .bopo-wrapper .tone-light { font-size: 1em; top: -0.85em; color: var(--chalk-white); }
-        
-        body.mode-bpmf-only .list-area.horizontal ruby { border: 2px solid #5dade2; border-radius: 8px; padding: 4px 6px; margin: 0 4px; display: inline-block; line-height: 1.2; }
-        body.mode-bpmf-only .list-area.horizontal rt { font-size: 1em; color: var(--chalk-white); line-height: 1.5; }
+        .chalk-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            min-width: 160px;
+            overflow: hidden;
+            position: relative;
+            background: rgba(0, 0, 0, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 10px 12px;
+            transition: background 0.2s;
+        }
 
-        /* 隱藏一般模式下原生注音字元 (ㄅ本的ㄅ) 旁邊的空注音框 */
-        body:not(.mode-bpmf-only) .bopomofo-only-char .moe-rt,
-        body:not(.mode-bpmf-only) ruby.bopomofo-only-char rt { display: none !important; }
+        /* 當區塊被收合時，隱藏本體，改由上方按鈕或側邊展開條控制 */
+        .chalk-panel.is-collapsed {
+            display: none !important;
+        }
 
-        /* --- 其餘版面設定 --- */
-        .duty-section { margin-top: auto; padding-top: 20px; border-top: 2px dashed rgba(255,255,255,0.3); background: rgba(0,0,0,0.1); padding: 20px; border-radius: 8px; }
-        .duty-label { font-size: 1.2em; opacity: 0.8; margin-bottom: 8px; display: block; }
-        .duty-content { font-size: calc(1.8em * var(--left-scale)); font-weight: 700; color: var(--chalk-yellow); text-shadow: var(--chalk-shadow); letter-spacing: 1px; }
+        /* 兩欄之間的拖曳分隔桿 */
+        .resizer {
+            width: 16px;
+            flex-shrink: 0;
+            cursor: col-resize;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            transition: background 0.2s;
+            border-radius: 8px;
+            margin: 0 2px;
+        }
+        .resizer.is-hidden { display: none !important; }
+        .resizer:hover, .resizer.dragging { background: rgba(255,255,255,0.15); }
+        .resizer-line { width: 4px; height: 55px; background: rgba(255,255,255,0.35); border-radius: 2px; }
 
-        .top-info-bar { display: flex; align-items: center; justify-content: space-between; padding-bottom: 20px; border-bottom: 2px solid rgba(255,255,255,0.1); margin-bottom: 20px; }
-        .date-navigator { display: flex; align-items: center; gap: 15px; }
-        .nav-btn { background: rgba(255,255,255,0.1); color: var(--chalk-white); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; width: 40px; height: 40px; display: flex; justify-content: center; align-items: center; font-size: 1.2em; cursor: pointer; transition: 0.2s; padding: 0; }
-        .nav-btn:hover { background: var(--nav-btn-hover); transform: scale(1.1); }
-        .date-display-group { text-align: center; }
-        .date-display { font-size: 1.6em; color: var(--chalk-yellow); font-weight: 700; letter-spacing: 2px; text-shadow: 1px 1px 2px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
-        .date-sub { font-size: 0.6em; color: rgba(255,255,255,0.7); font-weight: normal; margin-top: 5px; }
-        .time-box { text-align: right; }
-        .digital-clock { font-size: 2.5em; font-weight: 700; font-family: 'Noto Sans TC', monospace; line-height: 1; color: rgba(255,255,255,0.9); white-space: pre-line;}
-        .absentee-text { font-size: 1.8em; color: #ff6b6b; font-weight: bold; text-shadow: var(--chalk-shadow); max-width: 400px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* 區塊標題列 */
+        .panel-header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 8px;
+            border-bottom: 2px solid rgba(255,255,255,0.22);
+            padding-bottom: 6px;
+            flex-shrink: 0;
+        }
+        .panel-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .panel-header {
+            font-size: 1.45em;
+            font-weight: 900;
+            color: var(--chalk-white);
+            text-shadow: var(--chalk-shadow);
+            white-space: nowrap;
+        }
+        .panel-morning .panel-header { color: #ffeaa7; }
+        .panel-left .panel-header { color: #81ecec; }
+        .panel-right .panel-header { color: #ffffff; }
 
-        /* 自助打卡列專屬樣式 */
+        .font-adjust-btns { display: flex; gap: 4px; align-items: center; }
+        .font-adjust-btns button {
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 800;
+            transition: 0.2s;
+        }
+        .font-adjust-btns button:hover { background: rgba(255,255,255,0.3); transform: scale(1.04); }
+        .font-adjust-btns .btn-collapse-panel {
+            background: rgba(231, 76, 60, 0.25);
+            border-color: rgba(231, 76, 60, 0.5);
+            color: #ffcccc;
+        }
+        .font-adjust-btns .btn-collapse-panel:hover {
+            background: rgba(231, 76, 60, 0.7);
+            color: #fff;
+        }
+
+        /* =========================================================
+           👑 教育部標準直式注音與聲調鎖定引擎 (共用核心) 👑
+           ========================================================= */
+        .bopo-box {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            line-height: 1.05;
+            font-family: "Bopomofo", "Noto Sans TC", sans-serif;
+            user-select: none;
+        }
+        .bopo-box.with-side-tone {
+            padding-right: 0.32em;
+        }
+        /* 輕聲點：固定在第一個注音符號正上方中央 */
+        .bopo-box .tone-light-mark {
+            display: block;
+            text-align: center;
+            line-height: 0.55;
+            font-size: 0.95em;
+            font-weight: 900;
+            margin-bottom: 0.05em;
+        }
+        /* 每個注音符號單字容器 */
+        .bopo-box .sym-char {
+            display: block;
+            position: relative;
+            text-align: center;
+            line-height: 1.05;
+            font-weight: 700;
+        }
+        /* 二、三、四聲：絕對鎖定在「最後一個注音符號」的右側中央 */
+        .bopo-box .sym-char .tone-side-mark {
+            position: absolute;
+            left: 92%;
+            top: 50%;
+            transform: translateY(-48%);
+            font-size: 0.95em;
+            line-height: 1;
+            font-weight: 900;
+            white-space: nowrap;
+            pointer-events: none;
+        }
+
+        /* =========================================================
+           🟫 三大直式方格區域共用結構與三大差異化主題配色 🟫
+           ========================================================= */
+        .panel-morning { --cell-size: calc(70px * var(--morning-scale)); }
+        .panel-left    { --cell-size: calc(70px * var(--left-scale)); }
+        .panel-right   { --cell-size: calc(74px * var(--right-scale)); }
+
+        .contact-grid-wrapper {
+            display: flex;
+            flex-direction: row-reverse; /* 由右至左排列每一行 */
+            justify-content: flex-start;
+            align-items: flex-start;
+            overflow-x: auto;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding: 4px 6px 12px 6px;
+        }
+        .contact-grid-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+        .contact-grid-wrapper::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.28); border-radius: 4px; }
+
+        .contact-grid-board {
+            display: inline-flex;
+            flex-direction: row-reverse; /* 欄位由右至左排列 */
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .grid-col {
+            display: flex;
+            flex-direction: column;
+            width: var(--cell-size);
+            flex-shrink: 0;
+        }
+        .grid-col:last-child {
+            border-left: none !important;
+        }
+
+        /* 每一個方格 */
+        .grid-cell {
+            width: var(--cell-size);
+            height: var(--cell-size);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            box-sizing: border-box;
+            user-select: none;
+            overflow: hidden;
+            transition: background-color 0.15s;
+        }
+        .grid-cell:last-child {
+            border-bottom: none !important;
+        }
+
+        /* 第一大格：項次格 */
+        .grid-cell.header-cell {
+            height: calc(var(--cell-size) * 0.9);
+            font-size: calc(var(--cell-size) * 0.46);
+            font-weight: 900;
+        }
+        .grid-cell.header-cell.has-num {
+            cursor: pointer;
+        }
+        .grid-cell.header-cell.has-num:active {
+            transform: scale(0.94);
+        }
+
+        /* 可點擊切換國字/注音的內容格 */
+        .grid-cell.interactive-cell {
+            cursor: pointer;
+        }
+
+        /* --- 主題一：☀️ 晨間任務（暖陽黃便利貼方格，代表早修任務） --- */
+        .board-theme-morning {
+            border: 3px solid #d68910;
+            background-color: #fff9db;
+        }
+        .board-theme-morning .grid-col {
+            border-left: 2px solid #e59866;
+        }
+        .board-theme-morning .grid-col.item-odd {
+            background-color: #fffbeb;
+            color: #2c3e50;
+        }
+        .board-theme-morning .grid-col.item-even {
+            background-color: #fdebd0;
+            color: #2c3e50;
+        }
+        .board-theme-morning .grid-cell {
+            border-bottom: 2px solid #e59866;
+        }
+        .board-theme-morning .grid-cell.header-cell {
+            border-bottom: 3px solid #d68910;
+            color: #b9770e;
+            background-color: rgba(243, 156, 18, 0.12);
+        }
+        .board-theme-morning .grid-cell.header-cell.has-num:hover {
+            background-color: rgba(243, 156, 18, 0.35);
+        }
+        .board-theme-morning .grid-cell.interactive-cell:hover {
+            background-color: rgba(243, 156, 18, 0.22);
+        }
+
+        /* --- 主題二：📢 提醒事項（黑板粉筆虛線方格，代表叮嚀不必抄） --- */
+        .board-theme-left {
+            border: 3px solid rgba(255, 255, 255, 0.45);
+            background-color: #163626;
+        }
+        .board-theme-left .grid-col {
+            border-left: 2px dashed rgba(255, 255, 255, 0.32);
+        }
+        .board-theme-left .grid-col.item-odd {
+            background-color: #1f4734;
+            color: var(--chalk-white);
+        }
+        .board-theme-left .grid-col.item-even {
+            background-color: #143323;
+            color: var(--chalk-white);
+        }
+        .board-theme-left .grid-cell {
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.32);
+        }
+        .board-theme-left .grid-cell.header-cell {
+            border-bottom: 3px solid rgba(255, 255, 255, 0.45);
+            color: var(--chalk-yellow);
+            background-color: rgba(0, 0, 0, 0.2);
+        }
+        .board-theme-left .grid-cell.header-cell.has-num:hover {
+            background-color: rgba(241, 196, 15, 0.28);
+        }
+        .board-theme-left .grid-cell.interactive-cell:hover {
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+        .board-theme-left .bopo-box {
+            color: var(--chalk-yellow);
+        }
+
+        /* --- 主題三：📌 今日聯絡簿（白底與灰底實線方格，代表紙本聯絡簿要抄） --- */
+        .board-theme-right {
+            border: 3px solid #7f8c8d;
+            background-color: #ffffff;
+        }
+        .board-theme-right .grid-col {
+            border-left: 2px solid #95a5a6;
+        }
+        .board-theme-right .grid-col.item-odd {
+            background-color: #fcfcfc;
+            color: #1e272e;
+        }
+        .board-theme-right .grid-col.item-even {
+            background-color: #dfe4ea;
+            color: #1e272e;
+        }
+        .board-theme-right .grid-cell {
+            border-bottom: 2px solid #95a5a6;
+        }
+        .board-theme-right .grid-cell.header-cell {
+            border-bottom: 3px solid #7f8c8d;
+            color: #2c3e50;
+        }
+        .board-theme-right .grid-cell.header-cell.has-num:hover {
+            background-color: rgba(241, 196, 15, 0.35);
+        }
+        .board-theme-right .grid-cell.interactive-cell:hover {
+            background-color: rgba(52, 152, 219, 0.18);
+        }
+
+        /* --- 方格內部文字與注音比例 --- */
+        /* 1. 純國字模式 */
+        .cell-char-only {
+            font-size: calc(var(--cell-size) * 0.64);
+            font-weight: 900;
+            line-height: 1;
+            color: inherit;
+            text-align: center;
+        }
+
+        /* 2. 純注音模式 */
+        .cell-bpmf-only {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            color: inherit;
+        }
+        .cell-bpmf-only .bopo-box.len-1 { font-size: calc(var(--cell-size) * 0.44); }
+        .cell-bpmf-only .bopo-box.len-2 { font-size: calc(var(--cell-size) * 0.36); }
+        .cell-bpmf-only .bopo-box.len-3 { font-size: calc(var(--cell-size) * 0.28); }
+
+        /* 3. 國字＋注音模式 */
+        .cell-both {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            gap: calc(var(--cell-size) * 0.03);
+            padding: 2px;
+            color: inherit;
+        }
+        .cell-both .both-char {
+            font-size: calc(var(--cell-size) * 0.50);
+            font-weight: 900;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+        .cell-both .bopo-box.len-1 { font-size: calc(var(--cell-size) * 0.22); }
+        .cell-both .bopo-box.len-2 { font-size: calc(var(--cell-size) * 0.20); }
+        .cell-both .bopo-box.len-3 { font-size: calc(var(--cell-size) * 0.17); }
+
+        /* 4. 頁碼、數字或標點 */
+        .cell-eng-num {
+            font-weight: 900;
+            color: inherit;
+            line-height: 1.1;
+            text-align: center;
+            white-space: nowrap;
+            padding: 0 2px;
+        }
+        .cell-eng-num.str-short { font-size: calc(var(--cell-size) * 0.42); }
+        .cell-eng-num.str-med   { font-size: calc(var(--cell-size) * 0.34); }
+        .cell-eng-num.str-long  { font-size: calc(var(--cell-size) * 0.25); }
+        .cell-eng-num.str-xlong { font-size: calc(var(--cell-size) * 0.19); }
+
+        .cell-punct {
+            font-size: calc(var(--cell-size) * 0.48);
+            font-weight: 900;
+            color: inherit;
+            line-height: 1;
+            text-align: center;
+        }
+
+        /* --- 底部自助打卡列 --- */
         .attendance-bar-wrapper {
             background: rgba(0,0,0,0.25);
             border-radius: 8px;
-            padding: 10px 15px;
+            padding: 8px 15px;
             flex-shrink: 0;
             border: 1px solid rgba(255,255,255,0.1);
             overflow: hidden;
@@ -323,12 +592,11 @@
             align-items: center;
             width: 100%;
             padding-bottom: 8px;
-            padding-top: 5px;
+            padding-top: 4px;
         }
-        
         .att-seat {
             flex: 1 1 0px; 
-            max-width: 45px; 
+            max-width: 44px; 
             min-width: 15px; 
             aspect-ratio: 1 / 1; 
             height: auto; 
@@ -351,11 +619,11 @@
         .att-seat.late { background: #ffeaa7; color: #1a3c2b; box-shadow: 0 0 10px rgba(255,234,167,0.5); }
         .att-seat-label { position: absolute; bottom: -18px; font-size: clamp(0.5rem, 1.2vw, 0.75rem); color: #f1c40f; font-weight: bold; white-space: nowrap; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); }
 
-        #fullscreen-btn { position: fixed; bottom: 25px; right: 25px; z-index: 100; background: rgba(255,255,255,0.15); color: var(--chalk-white); border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); height: 40px; padding: 0 15px; font-size: 1.1rem; font-weight: bold; transition: 0.3s; cursor: pointer; backdrop-filter: blur(2px); }
+        #fullscreen-btn { position: fixed; bottom: 20px; right: 20px; z-index: 100; background: rgba(255,255,255,0.15); color: var(--chalk-white); border-radius: 6px; border: 1px solid rgba(255,255,255,0.3); height: 38px; padding: 0 14px; font-size: 1rem; font-weight: bold; transition: 0.3s; cursor: pointer; backdrop-filter: blur(2px); }
         #fullscreen-btn:hover { background: rgba(255,255,255,0.9); color: #1a3c2b; }
         #loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; color:#333; font-weight:bold; }
 
-        /* Modals */
+        /* 彈出視窗樣式 */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(3px);}
         .modal-content { background: #fff; color: #333; padding: 25px; border-radius: 12px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
         .modal-content-large { max-width: 900px; padding: 40px; border-radius: 20px;}
@@ -366,15 +634,15 @@
         .seat-btn small { display: block; font-size: 0.7em; opacity: 0.9; margin-top: 2px; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 15px;}
 
-        /* 自訂輸入框 Modal (取代原生的 prompt 以防瀏覽器阻擋) */
         #custom-prompt-modal .modal-content { max-width: 400px; }
         #prompt-input { width: 100%; padding: 12px; margin-top: 15px; border: 2px solid #bdc3c7; border-radius: 8px; font-size: 1.1rem; }
 
         /* 進階注音編輯器 */
-        .ruby-edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; margin-top: 25px; margin-bottom: 30px;}
-        .ruby-edit-card { padding: 25px 15px; border-radius: 16px; border: 2px solid #ecf0f1; background: #f8f9fa; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
-        .ruby-edit-char { font-size: 3rem; font-weight: 900; color: #2c3e50; margin-bottom: 15px; }
-        .ruby-edit-input { width: 90%; text-align: center; padding: 12px; border: 3px solid #bdc3c7; border-radius: 10px; color: #e74c3c; font-weight: 900; font-size: 1.8rem;}
+        .ruby-edit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 20px; margin-top: 25px; margin-bottom: 30px;}
+        .ruby-edit-card { padding: 20px 12px; border-radius: 16px; border: 2px solid #ecf0f1; background: #f8f9fa; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .ruby-edit-char { font-size: 2.8rem; font-weight: 900; color: #2c3e50; line-height: 1.1; }
+        .ruby-edit-input { width: 92%; text-align: center; padding: 10px; border: 3px solid #bdc3c7; border-radius: 10px; color: #e74c3c; font-weight: 900; font-size: 1.6rem;}
+        .ruby-mode-select { width: 92%; padding: 6px; border-radius: 8px; border: 2px solid #bdc3c7; font-weight: bold; color: #2c3e50; font-size: 0.95rem; background: #fff; cursor: pointer; }
 
         /* 假別選擇器 */
         .leave-type-selector { display: flex; gap: 15px; margin: 15px 0; flex-wrap: wrap; background: #f4f6f7; padding: 10px; border-radius: 8px; }
@@ -382,11 +650,10 @@
         .leave-type-selector input[type="radio"] { transform: scale(1.2); cursor: pointer; }
 
         @media (max-width: 900px) {
-            #dashboard-screen { padding: 15px; padding-bottom: 10px;}
-            .dashboard-layout { flex-direction: column; gap: 20px;}
-            .left-panel { width: 100% !important; height: auto; max-height: 40vh; border-bottom: 2px dashed rgba(255,255,255,0.2); padding-bottom: 20px; padding-right: 0;}
-            .right-panel { padding-left: 0; }
-            .resizer { display: none; }
+            #dashboard-screen { padding: 12px; }
+            .dashboard-layout { flex-direction: column; gap: 12px; overflow-y: auto; }
+            .chalk-panel { width: 100% !important; flex: none !important; min-height: 320px; }
+            .resizer { display: none !important; }
         }
     </style>
 </head>
@@ -394,17 +661,17 @@
 
     <div id="loading-overlay">資料同步中...</div>
 
-    <!-- Setup Screen -->
+    <!-- 後台設定畫面 -->
     <div id="setup-screen" class="app-screen active">
         <div class="container">
-            <div class="header"><h1>🏫 班級電子看板 v11.0 (完美排版與聲調鎖定版)</h1></div>
+            <div class="header"><h1>🏫 班級電子看板（三欄直式方格與聲調鎖定版）</h1></div>
             
             <div class="cloud-bar">
                 <div class="user-chip">
                     <span class="status-dot" id="cloud-dot"></span>
                     <span id="cloud-status">單機模式</span>
                 </div>
-                <button id="btn-login" class="btn-google" onclick="doLogin()">Google 登入同步</button>
+                <button id="btn-login" class="btn-google" onclick="doLogin()">雲端帳號登入同步</button>
                 <button id="btn-logout" class="btn-secondary" style="display:none; padding:8px 16px;" onclick="doLogout()">登出</button>
             </div>
 
@@ -412,15 +679,15 @@
                 
                 <!-- 全域設定區塊 -->
                 <div class="control-group" style="background: #fdfefe; padding: 20px; border-radius: 10px; border: 2px solid #d0ece7; margin-bottom: 25px;">
-                    <h3 style="margin-top:0; color:#16a085; border-bottom: 2px solid #d0ece7; padding-bottom: 10px;">⚙️ 班級與打卡全域設定</h3>
+                    <h3 style="margin-top:0; color:#16a085; border-bottom: 2px solid #d0ece7; padding-bottom: 10px;">⚙️ 班級與方格聯絡簿全域設定</h3>
                     <div style="display:flex; gap:15px; flex-wrap:wrap;">
                         <div style="flex:1; min-width: 120px;">
                             <label>👥 班級總座號</label>
                             <input type="number" id="setting-max-seat" value="35" min="1" max="100">
                         </div>
                         <div style="flex:2; min-width: 200px;">
-                            <label>🚫 隱藏/空號 (用逗號隔開)</label>
-                            <input type="text" id="setting-excluded-seats" placeholder="例: 4, 14">
+                            <label>🚫 隱藏或空號（用逗號隔開）</label>
+                            <input type="text" id="setting-excluded-seats" placeholder="例如：4, 14">
                         </div>
                         <div style="flex:1; min-width: 120px;">
                             <label>⏰ 遲到判定時間</label>
@@ -428,8 +695,12 @@
                         </div>
                     </div>
                     <div style="display:flex; gap:15px; flex-wrap:wrap; margin-top: 15px; align-items:flex-end;">
-                        <div style="flex:2; min-width: 200px;">
-                            <label>🗓️ 學期起始日 (統計起點)</label>
+                        <div style="flex:1; min-width: 140px;">
+                            <label>📐 直行方格數量</label>
+                            <input type="number" id="setting-grid-rows" value="5" min="3" max="12">
+                        </div>
+                        <div style="flex:1; min-width: 180px;">
+                            <label>🗓️ 學期起始日（統計起點）</label>
                             <input type="date" id="setting-semester-start">
                         </div>
                         <div style="flex:1; min-width: 150px;">
@@ -465,38 +736,49 @@
                     </div>
                 </div>
 
-                <hr style="border:0; border-top:1px solid #eee; margin: 30px 0;">
+                <hr style="border:0; border-top:1px solid #eee; margin: 25px 0;">
 
+                <!-- 1. 晨間任務設定 -->
                 <div class="control-group">
-                    <label>📢 提醒事項 (左側)</label>
+                    <label style="border-left-color: #f39c12;">☀️ 晨間任務（左側・暖陽黃方格）</label>
+                    <div class="input-row">
+                        <input type="text" id="morning-input" placeholder="例如：訂正國習第十二頁" onkeypress="handleEnter(event, 'morning')">
+                        <button onclick="addItem('morning')" class="btn-primary" style="background:#e67e22;">新增</button>
+                    </div>
+                    <div id="morning-setup-list" class="setup-list"></div>
+                </div>
+
+                <!-- 2. 提醒事項設定 -->
+                <div class="control-group">
+                    <label style="border-left-color: #27ae60;">📢 提醒事項（中間・黑板粉筆方格）</label>
                     <div class="input-row">
                         <input type="text" id="left-input" placeholder="例如：明天穿運動服" onkeypress="handleEnter(event, 'left')">
-                        <button onclick="addItem('left')" class="btn-primary">新增</button>
+                        <button onclick="addItem('left')" class="btn-primary" style="background:#27ae60;">新增</button>
                     </div>
                     <div id="left-setup-list" class="setup-list"></div>
                 </div>
 
+                <!-- 3. 今日聯絡簿設定 -->
                 <div class="control-group">
-                    <label>📌 聯絡簿 (右側)</label>
+                    <label style="border-left-color: #2980b9;">📌 今日聯絡簿（右側・白灰紙本方格）</label>
                     <div class="input-row">
-                        <input type="text" id="right-input" placeholder="例如：國習 P.12、13" onkeypress="handleEnter(event, 'right')">
+                        <input type="text" id="right-input" placeholder="例如：國習第十二、十三頁" onkeypress="handleEnter(event, 'right')">
                         <button onclick="addItem('right')" class="btn-primary">新增</button>
                     </div>
-                    <!-- 聯絡簿同步勾選框 -->
                     <label class="sync-option" title="勾選後，新增的項目會自動傳送到作業繳交系統">
                         <input type="checkbox" id="sync-check" checked> 🔄 同步至作業繳交系統
                     </label>
                     <div id="right-setup-list" class="setup-list"></div>
                 </div>
 
-                <div style="margin-top: 40px;">
-                    <button id="enter-dashboard-btn" class="btn-primary" style="width:100%; font-size: 1.2em; padding: 15px; background: #27ae60; border: none;">進入黑板模式 ▶</button>
+                <div style="margin-top: 35px;">
+                    <button id="enter-dashboard-btn" class="btn-primary" style="width:100%; font-size: 1.25em; padding: 15px; background: #27ae60; border: none;">進入黑板模式 ▶</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 請假選擇 Modal -->
+    <!-- 請假選擇視窗 -->
     <div id="absent-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 style="margin-top:0; color:#2c3e50; font-size:1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px;">請點選請假座號與假別</h3>
@@ -518,7 +800,7 @@
         </div>
     </div>
 
-    <!-- 統計數據 Modal -->
+    <!-- 統計數據視窗 -->
     <div id="stats-modal" class="modal-overlay">
         <div class="modal-content modal-content-large">
             <h3 style="margin-top:0; color:#2c3e50; font-size:1.8rem; border-bottom: 3px solid #eee; padding-bottom: 10px;">📊 學期出缺席統計報表</h3>
@@ -528,8 +810,8 @@
                     <thead>
                         <tr style="background:#f2f2f2; position:sticky; top:0; z-index: 10;">
                             <th style="padding:12px; border-bottom: 2px solid #ccc;">座號</th>
-                            <th style="padding:12px; border-bottom: 2px solid #ccc;">準時 (綠)</th>
-                            <th style="padding:12px; border-bottom: 2px solid #ccc;">遲到 (黃)</th>
+                            <th style="padding:12px; border-bottom: 2px solid #ccc;">準時（綠）</th>
+                            <th style="padding:12px; border-bottom: 2px solid #ccc;">遲到（黃）</th>
                             <th style="padding:12px; border-bottom: 2px solid #ccc;">事假</th>
                             <th style="padding:12px; border-bottom: 2px solid #ccc;">病假</th>
                             <th style="padding:12px; border-bottom: 2px solid #ccc;">喪假</th>
@@ -545,10 +827,10 @@
         </div>
     </div>
 
-    <!-- 進階注音編輯器 Modal -->
+    <!-- 進階注音編輯器視窗 -->
     <div id="bpmf-modal" class="modal-overlay">
         <div class="modal-content modal-content-large">
-            <h3 style="margin-top:0; color:#2c3e50; font-size:2rem; border-bottom: 3px solid #eee; padding-bottom: 15px; font-weight: 900;">🎯 進階中文注音自訂</h3>
+            <h3 style="margin-top:0; color:#2c3e50; font-size:2rem; border-bottom: 3px solid #eee; padding-bottom: 15px; font-weight: 900;">🎯 進階中文注音與單字顯示設定</h3>
             <div id="ruby-grid" class="ruby-edit-grid"></div>
             <div class="modal-actions" style="margin-top: 40px;">
                 <button class="btn-secondary" style="font-size: 1.4rem; padding: 12px 25px;" onclick="closeBpmfModal()">取消</button>
@@ -557,7 +839,7 @@
         </div>
     </div>
     
-    <!-- 自訂文字輸入 Prompt Modal -->
+    <!-- 自訂文字輸入視窗 -->
     <div id="custom-prompt-modal" class="modal-overlay">
         <div class="modal-content">
             <h3 id="prompt-title" style="margin-top:0; color:#2c3e50; font-size:1.5rem; border-bottom: 2px solid #eee; padding-bottom: 10px;">請修改內容：</h3>
@@ -572,72 +854,115 @@
     <!-- 黑板主畫面 -->
     <div id="dashboard-screen" class="app-screen">
         
-        <div class="dashboard-layout" id="dashboard-layout">
-            <div class="chalk-panel left-panel" id="left-panel">
-                <div class="panel-header-container">
-                    <div class="panel-header" id="header-left" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">提醒事項</div>
-                    <div class="font-adjust-btns">
-                        <button onclick="adjustFont('left', 0.1)" title="放大字體">放大</button>
-                        <button onclick="adjustFont('left', -0.1)" title="縮小字體">縮小</button>
+        <!-- 頂部資訊與工具列 -->
+        <div class="top-info-bar">
+            <div class="info-left-group">
+                <div class="date-navigator">
+                    <button class="nav-btn" onclick="navDate(-1)" title="前一天">◀</button>
+                    <div class="date-display-group">
+                        <div class="date-display" id="date-display">2026年01月01日</div>
+                        <div class="date-sub" id="day-display">星期一</div>
                     </div>
+                    <button class="nav-btn" onclick="navDate(1)" title="後一天">▶</button>
                 </div>
-                
-                <div class="list-area" id="display-left-list"></div>
-                
-                <div class="duty-section">
-                    <span class="duty-label" id="label-duty">今日值日生</span>
-                    <div class="duty-content" id="display-duty"></div>
+
+                <!-- 極簡化值日生標籤 -->
+                <div class="top-badge duty-badge" title="今日值日生">
+                    <span>🧹 值日生：</span>
+                    <span id="display-duty">無</span>
                 </div>
+
+                <!-- 出缺席狀態摘要 -->
+                <div class="absentee-text" id="display-absent">全勤</div>
             </div>
 
-            <div class="resizer" id="resizer" title="拖曳調整大小"><div class="resizer-line"></div></div>
-
-            <div class="chalk-panel right-panel" id="right-panel">
-                <div class="top-info-bar">
-                    <div style="display: flex; align-items: center; gap: 30px;">
-                        <div class="date-navigator">
-                            <button class="nav-btn" onclick="navDate(-1)" title="前一天">◀</button>
-                            <div class="date-display-group">
-                                <div class="date-display" id="date-display">2026/01/01</div>
-                                <div class="date-sub" id="day-display">星期一</div>
-                            </div>
-                            <button class="nav-btn" onclick="navDate(1)" title="後一天">▶</button>
-                        </div>
-                        <div class="absentee-text" id="display-absent">全勤</div>
-                    </div>
-                    <div class="time-box">
-                        <div class="digital-clock" id="digital-clock">00:00</div>
-                    </div>
+            <!-- 中央：三區塊展開/收合開關 與 全域控制 -->
+            <div class="global-controls-wrapper">
+                <button id="toggle-panel-morning" class="ctrl-btn panel-toggle-btn active-morning" onclick="togglePanel('morning')" title="點擊切換顯示或收合「晨間任務」">☀️ 晨間任務</button>
+                <button id="toggle-panel-left" class="ctrl-btn panel-toggle-btn active-left" onclick="togglePanel('left')" title="點擊切換顯示或收合「提醒事項」">📢 提醒事項</button>
+                <button id="toggle-panel-right" class="ctrl-btn panel-toggle-btn active-right" onclick="togglePanel('right')" title="點擊切換顯示或收合「今日聯絡簿」">📌 今日聯絡簿</button>
+                
+                <div class="row-count-control" title="調整每一直行的方格數量">
+                    <button onclick="adjustGridRows(-1)" title="減少一格">➖</button>
+                    <span id="grid-rows-label">直行 5 格</span>
+                    <button onclick="adjustGridRows(1)" title="增加一格">➕</button>
                 </div>
 
-                <div class="panel-header-container big-title" style="align-items: center; flex-wrap: wrap;">
-                    <div class="panel-header" id="header-right" style="margin-bottom:0; border-bottom:none; padding-bottom:0;">今日聯絡簿</div>
-                    <div class="global-controls-wrapper">
-                        <button id="discrete-setup-btn" title="返回設定">⚙ 設定</button>
-                        <button id="toggle-writing-btn" title="切換直書/橫書">📝 直/橫</button>
-                        <button id="toggle-display-btn" title="切換顯示模式">👁️ 顯示模式</button>
-                    </div>
-                    <div class="font-adjust-btns">
-                        <button onclick="adjustFont('right', 0.1)" title="放大字體">放大</button>
-                        <button onclick="adjustFont('right', -0.1)" title="縮小字體">縮小</button>
-                    </div>
-                </div>
+                <button id="toggle-display-btn" class="ctrl-btn" title="一鍵切換全體顯示模式">👁️ 國字＋注音</button>
+                <button id="discrete-setup-btn" class="ctrl-btn" title="返回後台設定畫面">⚙ 設定</button>
+            </div>
 
-                <div class="list-area" id="display-right-list"></div>
+            <!-- 右側：數位時鐘 -->
+            <div class="time-box">
+                <div class="digital-clock" id="digital-clock">上午 00:00</div>
             </div>
         </div>
 
-        <!-- 🌟 自助打卡列 (螢幕最下方) 🌟 -->
-        <div class="attendance-bar-wrapper">
-            <div class="attendance-bar" id="attendance-bar">
-                <!-- 號碼按鈕會透過 JS 生成於此 -->
+        <!-- 三欄直式方格主區域（可個別收合、可拖曳調整寬度） -->
+        <div class="dashboard-layout" id="dashboard-layout">
+            
+            <!-- 左欄：☀️ 晨間任務 -->
+            <div class="chalk-panel panel-morning" id="panel-morning">
+                <div class="panel-header-container">
+                    <div class="panel-title-group">
+                        <div class="panel-header">☀️ 晨間任務</div>
+                    </div>
+                    <div class="font-adjust-btns">
+                        <button onclick="adjustFont('morning', 0.1)" title="放大晨間任務方格">放大</button>
+                        <button onclick="adjustFont('morning', -0.1)" title="縮小晨間任務方格">縮小</button>
+                        <button class="btn-collapse-panel" onclick="togglePanel('morning')" title="收合晨間任務">收合</button>
+                    </div>
+                </div>
+                <div class="contact-grid-wrapper" id="display-morning-list"></div>
             </div>
+
+            <!-- 分隔拖曳桿 1 -->
+            <div class="resizer" id="resizer-1" title="左右拖曳調整寬度"><div class="resizer-line"></div></div>
+
+            <!-- 中欄：📢 提醒事項 -->
+            <div class="chalk-panel panel-left" id="panel-left">
+                <div class="panel-header-container">
+                    <div class="panel-title-group">
+                        <div class="panel-header">📢 提醒事項</div>
+                    </div>
+                    <div class="font-adjust-btns">
+                        <button onclick="adjustFont('left', 0.1)" title="放大提醒事項方格">放大</button>
+                        <button onclick="adjustFont('left', -0.1)" title="縮小提醒事項方格">縮小</button>
+                        <button class="btn-collapse-panel" onclick="togglePanel('left')" title="收合提醒事項">收合</button>
+                    </div>
+                </div>
+                <div class="contact-grid-wrapper" id="display-left-list"></div>
+            </div>
+
+            <!-- 分隔拖曳桿 2 -->
+            <div class="resizer" id="resizer-2" title="左右拖曳調整寬度"><div class="resizer-line"></div></div>
+
+            <!-- 右欄：📌 今日聯絡簿 -->
+            <div class="chalk-panel panel-right" id="panel-right">
+                <div class="panel-header-container">
+                    <div class="panel-title-group">
+                        <div class="panel-header">📌 今日聯絡簿</div>
+                    </div>
+                    <div class="font-adjust-btns">
+                        <button onclick="adjustFont('right', 0.1)" title="放大聯絡簿方格">放大</button>
+                        <button onclick="adjustFont('right', -0.1)" title="縮小聯絡簿方格">縮小</button>
+                        <button class="btn-collapse-panel" onclick="togglePanel('right')" title="收合今日聯絡簿">收合</button>
+                    </div>
+                </div>
+                <div class="contact-grid-wrapper" id="display-right-list"></div>
+            </div>
+
+        </div>
+
+        <!-- 自助打卡列 -->
+        <div class="attendance-bar-wrapper">
+            <div class="attendance-bar" id="attendance-bar"></div>
         </div>
         
-        <button id="fullscreen-btn" title="全螢幕">⛶ 全螢幕</button>
+        <button id="fullscreen-btn" title="切換全螢幕">⛶ 全螢幕</button>
     </div>
 
-    <!-- ===== JS 邏輯區域 ===== -->
+    <!-- ===== 核心邏輯區 ===== -->
     <script>
         const userFirebaseConfig = {
             apiKey: "AIzaSyC8ri0BEKk9hSzSZjq760eWHyNwo9Z2vqE",
@@ -648,33 +973,48 @@
             appId: "1:468701070411:web:95d9b588c37ed217aef9ce"
         };
 
-        const py2bpmf = {"a":"ㄚ","ai":"ㄞ","an":"ㄢ","ang":"ㄤ","ao":"ㄠ","ba":"ㄅㄚ","bai":"ㄅㄞ","ban":"ㄅㄢ","bang":"ㄅㄤ","bao":"ㄅㄠ","bei":"ㄅㄟ","ben":"ㄅㄣ","beng":"ㄅㄥ","bi":"ㄅㄧ","bian":"ㄅㄧㄢ","biao":"ㄅㄧㄠ","bie":"ㄅㄧㄝ","bin":"ㄅㄧㄣ","bing":"ㄅㄧㄥ","bo":"ㄅㄛ","bu":"ㄅㄨ","ca":"ㄘㄚ","cai":"ㄘㄞ","can":"ㄘㄢ","cang":"ㄘㄤ","cao":"ㄘㄠ","ce":"ㄘㄜ","cen":"ㄘㄣ","ceng":"ㄘㄥ","cha":"ㄔㄚ","chai":"ㄔㄞ","chan":"ㄔㄤ","chang":"ㄔㄤ","chao":"ㄔㄠ","che":"ㄔㄜ","chen":"ㄔㄣ","cheng":"ㄔㄥ","chi":"ㄔ","chong":"ㄔㄨㄥ","chou":"ㄔㄡ","chu":"ㄔㄨ","chua":"ㄔㄨㄚ","chuai":"ㄔㄨㄞ","chuan":"ㄔㄨㄢ","chuang":"ㄔㄨㄤ","chui":"ㄔㄨㄟ","chun":"ㄔㄨㄣ","chuo":"ㄔㄨㄛ","ci":"ㄘ","cong":"ㄘㄨㄥ","cou":"ㄘㄡ","cu":"ㄘㄨ","cuan":"ㄘㄨㄢ","cui":"ㄘㄨㄟ","cun":"ㄘㄨㄣ","cuo":"ㄘㄨㄛ","da":"ㄉㄚ","dai":"ㄉㄞ","dan":"ㄉㄢ","dang":"ㄉㄤ","dao":"ㄉㄠ","de":"ㄉㄜ","dei":"ㄉㄟ","den":"ㄉㄣ","deng":"ㄉㄥ","di":"ㄉㄧ","dian":"ㄉㄧㄢ","diao":"ㄉㄧㄠ","die":"ㄉㄧㄝ","ding":"ㄉㄧㄥ","diu":"ㄉㄧㄡ","dong":"ㄉㄨㄥ","dou":"ㄉㄡ","du":"ㄉㄨ","duan":"ㄉㄨㄢ","dui":"ㄉㄨㄟ","dun":"ㄉㄨㄣ","duo":"ㄉㄨㄛ","e":"ㄜ","ei":"ㄟ","en":"ㄣ","eng":"ㄥ","er":"ㄦ","fa":"ㄈㄚ","fan":"ㄈㄢ","fang":"ㄈㄤ","fei":"ㄈㄟ","fen":"ㄈㄣ","feng":"ㄈㄥ","fo":"ㄈㄛ","fou":"ㄈㄡ","fu":"ㄈㄨ","ga":"ㄍㄚ","gai":"ㄍㄞ","gan":"ㄍㄢ","gang":"ㄍㄤ","gao":"ㄍㄠ","ge":"ㄍㄜ","gei":"ㄍㄟ","gen":"ㄍㄣ","geng":"ㄍㄥ","gong":"ㄍㄨㄥ","gou":"ㄍㄡ","gu":"ㄍㄨ","gua":"ㄍㄨㄚ","guai":"ㄍㄨㄞ","guan":"ㄍㄨㄢ","guang":"ㄍㄨㄤ","gui":"ㄍㄨㄟ","gun":"ㄍㄨㄣ","guo":"ㄍㄨㄛ","ha":"ㄏㄚ","hai":"ㄏㄞ","han":"ㄏㄢ","hang":"ㄏㄤ","hao":"ㄏㄠ","he":"ㄏㄜ","hei":"ㄏㄟ","hen":"ㄏㄣ","heng":"ㄏㄥ","hong":"ㄏㄨㄥ","hou":"ㄏㄡ","hu":"ㄏㄨ","hua":"ㄏㄨㄚ","huai":"ㄏㄨㄞ","huan":"ㄏㄨㄢ","huang":"ㄏㄨㄤ","hui":"ㄏㄨㄟ","hun":"ㄏㄨㄣ","huo":"ㄏㄨㄛ","ji":"ㄐㄧ","jia":"ㄐㄧㄚ","jian":"ㄐㄧㄢ","jiang":"ㄐㄧㄤ","jiao":"ㄐㄧㄠ","jie":"ㄐㄧㄝ","jin":"ㄐㄧㄣ","jing":"ㄐㄧㄥ","jiong":"ㄐㄩㄥ","jiu":"ㄐㄧㄡ","ju":"ㄐㄩ","juan":"ㄐㄩㄢ","jue":"ㄐㄩㄝ","jun":"ㄐㄩㄣ","ka":"ㄎㄚ","kai":"ㄎㄞ","kan":"ㄎㄢ","kang":"ㄎㄤ","kao":"ㄎㄠ","ke":"ㄎㄜ","kei":"ㄎㄟ","ken":"ㄎㄣ","keng":"ㄎㄥ","kong":"ㄎㄨㄥ","kou":"ㄎㄡ","ku":"ㄎㄨ","kua":"ㄎㄨㄚ","kuai":"ㄎㄨㄞ","kuan":"ㄎㄨㄢ","kuang":"ㄎㄨㄤ","kui":"ㄎㄨㄟ","kun":"ㄎㄨㄣ","kuo":"ㄎㄨㄛ","la":"ㄌㄚ","lai":"ㄌㄞ","lan":"ㄌㄢ","lang":"ㄌㄤ","lao":"ㄌㄠ","le":"ㄌㄜ","lei":"ㄌㄟ","leng":"ㄌㄥ","li":"ㄌㄧ","lia":"ㄌㄧㄚ","lian":"ㄌㄧㄢ","liang":"ㄌㄧㄤ","liao":"ㄌㄧㄠ","lie":"ㄌㄧㄝ","lin":"ㄌㄧㄣ","ling":"ㄌㄧㄥ","liu":"ㄌㄧㄡ","lo":"ㄌㄛ","long":"ㄌㄨㄥ","lou":"ㄌㄡ","lu":"ㄌㄨ","luan":"ㄌㄨㄢ","lun":"ㄌㄨㄣ","luo":"ㄌㄨㄛ","lv":"ㄌㄩ","lve":"ㄌㄩㄝ","ma":"ㄇㄚ","mai":"ㄇㄞ","man":"ㄇㄢ","mang":"ㄇㄤ","mao":"ㄇㄠ","me":"ㄇㄜ","mei":"ㄇㄟ","men":"ㄇㄣ","meng":"ㄇㄥ","mi":"ㄇㄧ","mian":"ㄇㄧㄢ","miao":"ㄇㄧㄠ","mie":"ㄇㄧㄝ","min":"ㄇㄧㄣ","ming":"ㄇㄧㄥ","miu":"ㄇㄧㄡ","mo":"ㄇㄛ","mou":"ㄇㄡ","mu":"ㄇㄨ","na":"ㄋㄚ","nai":"ㄋㄞ","nan":"ㄋㄢ","nang":"ㄋㄤ","nao":"ㄋㄠ","ne":"ㄋㄜ","nei":"ㄋㄟ","nen":"ㄋㄣ","neng":"ㄋㄥ","ni":"ㄋㄧ","nian":"ㄋㄧㄢ","niang":"ㄋㄧㄤ","niao":"ㄋㄧㄠ","nie":"ㄋㄧㄝ","nin":"ㄋㄧㄣ","ning":"ㄋㄧㄥ","niu":"ㄋㄧㄡ","nong":"ㄋㄨㄥ","nou":"ㄋㄡ","nu":"ㄋㄨ","nuan":"ㄋㄨㄢ","nun":"ㄋㄨㄣ","nuo":"ㄋㄨㄛ","nv":"ㄋㄩ","nve":"ㄋㄩㄝ","o":"ㄛ","ou":"ㄡ","pa":"ㄆㄚ","pai":"ㄆㄞ","pan":"ㄆㄢ","pang":"ㄆㄤ","pao":"ㄆㄠ","pei":"ㄆㄟ","pen":"ㄆㄣ","peng":"ㄆㄥ","pi":"ㄆㄧ","pian":"ㄆㄧㄢ","piao":"ㄆㄧㄠ","pie":"ㄆㄧㄝ","pin":"ㄆㄧㄣ","ping":"ㄆㄧㄥ","po":"ㄆㄛ","pou":"ㄆㄡ","pu":"ㄆㄨ","qi":"ㄑㄧ","qia":"ㄑㄧㄚ","qian":"ㄑㄧㄢ","qiang":"ㄑㄧㄤ","qiao":"ㄑㄧㄠ","qie":"ㄑㄧㄝ","qin":"ㄑㄧㄣ","qing":"ㄑㄧㄥ","qiong":"ㄑㄩㄥ","qiu":"ㄑㄧㄡ","qu":"ㄑㄩ","quan":"ㄑㄩㄢ","que":"ㄑㄩㄝ","qun":"ㄑㄩㄣ","ran":"ㄖㄢ","rang":"ㄖㄤ","rao":"ㄖㄠ","re":"ㄖㄜ","ren":"ㄖㄣ","reng":"ㄖㄥ","ri":"ㄖ","rong":"ㄖㄨㄥ","rou":"ㄖㄡ","ru":"ㄖㄨ","ruan":"ㄖㄨㄢ","rui":"ㄖㄨㄟ","run":"ㄖㄨㄣ","ruo":"ㄖㄨㄛ","sa":"ㄙㄚ","sai":"ㄙㄞ","san":"ㄙㄢ","sang":"ㄙㄤ","sao":"ㄙㄠ","se":"ㄙㄜ","sen":"ㄙㄣ","seng":"ㄙㄥ","sha":"ㄕㄚ","shai":"ㄕㄞ","shan":"ㄕㄢ","shang":"ㄕㄤ","shao":"ㄕㄠ","she":"ㄕㄜ","shei":"ㄕㄟ","shen":"ㄕㄣ","sheng":"ㄕㄥ","shi":"ㄕ","shou":"ㄕㄡ","shu":"ㄕㄨ","shua":"ㄕㄨㄚ","shuai":"ㄕㄨㄞ","shuan":"ㄕㄨㄢ","shuang":"ㄕㄨㄤ","shui":"ㄕㄨㄟ","shun":"ㄕㄨㄣ","shuo":"ㄕㄨㄛ","si":"ㄙ","song":"ㄙㄨㄥ","sou":"ㄙㄡ","su":"ㄙㄨ","suan":"ㄙㄨㄢ","sui":"ㄙㄨㄟ","sun":"ㄙㄨㄣ","suo":"ㄙㄨㄛ","ta":"ㄊㄚ","tai":"ㄊㄞ","tan":"ㄊㄢ","tang":"ㄊㄤ","tao":"ㄊㄠ","te":"ㄊㄜ","teng":"ㄊㄥ","ti":"ㄊㄧ","tian":"ㄊㄧㄢ","tiao":"ㄊㄧㄠ","tie":"ㄊㄧㄝ","ting":"ㄊㄧㄥ","tong":"ㄊㄨㄥ","tou":"ㄊㄡ","tu":"ㄊㄨ","tuan":"ㄊㄨㄢ","tui":"ㄊㄨㄟ","tun":"ㄊㄨㄣ","tuo":"ㄊㄨㄛ","wa":"ㄨㄚ","wai":"ㄨㄞ","wan":"ㄨㄢ","wang":"ㄨㄤ","wei":"ㄨㄟ","wen":"ㄨㄣ","weng":"ㄨㄥ","wo":"ㄨㄛ","wu":"ㄨ","xi":"ㄒㄧ","xia":"ㄒㄧㄚ","xian":"ㄒㄧㄢ","xiang":"ㄒㄧㄤ","xiao":"ㄒㄧㄠ","xie":"ㄒㄧㄝ","xin":"ㄒㄧㄣ","xing":"ㄒㄧㄥ","xiong":"ㄒㄩㄥ","xiu":"ㄒㄧㄡ","xu":"ㄒㄩ","xuan":"ㄒㄩㄢ","xue":"ㄒㄩㄝ","xun":"ㄒㄩㄣ","ya":"ㄧㄚ","yan":"ㄧㄤ","yang":"ㄧㄤ","yao":"ㄧㄠ","ye":"ㄧㄝ","yi":"ㄧ","yin":"ㄧㄣ","ying":"ㄧㄥ","yo":"ㄧㄛ","yong":"ㄩㄥ","you":"ㄧㄡ","yu":"ㄩ","yuan":"ㄩㄢ","yue":"ㄩㄝ","yun":"ㄩㄣ","za":"ㄗㄚ","zai":"ㄗㄞ","zan":"ㄗㄢ","zang":"ㄗㄤ","zao":"ㄗㄠ","ze":"ㄗㄜ","zei":"ㄗㄟ","zen":"ㄗㄣ","zeng":"ㄗㄥ","zha":"ㄓㄚ","zhai":"ㄓㄞ","zhan":"ㄓㄢ","zhang":"ㄓㄤ","zhao":"ㄓㄠ","zhe":"ㄓㄜ","zhei":"ㄓㄟ","zhen":"ㄓㄣ","zheng":"ㄓㄥ","zhi":"ㄓ","zhong":"ㄓㄨㄥ","zhou":"ㄓㄡ","zhu":"ㄓㄨ","zhua":"ㄓㄨㄚ","zhuai":"ㄓㄨㄞ","zhuan":"ㄓㄨㄢ","zhuang":"ㄓㄨㄤ","zhui":"ㄓㄨㄟ","zhun":"ㄓㄨㄣ","zhuo":"ㄓㄨㄛ","zi":"ㄗ","zong":"ㄗㄨㄥ","zou":"ㄗㄡ","zu":"ㄗㄨ","zuan":"ㄗㄨㄢ","zui":"ㄗㄨㄟ","zun":"ㄗㄨㄣ","zuo":"ㄗㄨㄛ"};
+        const py2bpmf = {"a":"ㄚ","ai":"ㄞ","an":"ㄢ","ang":"ㄤ","ao":"ㄠ","ba":"ㄅㄚ","bai":"ㄅㄞ","ban":"ㄅㄢ","bang":"ㄅㄤ","bao":"ㄅㄠ","bei":"ㄅㄟ","ben":"ㄅㄣ","beng":"ㄅㄥ","bi":"ㄅㄧ","bian":"ㄅㄧㄢ","biao":"ㄅㄧㄠ","bie":"ㄅㄧㄝ","bin":"ㄅㄧㄣ","bing":"ㄅㄧㄥ","bo":"ㄅㄛ","bu":"ㄅㄨ","ca":"ㄘㄚ","cai":"ㄘㄞ","can":"ㄘㄢ","cang":"ㄘㄤ","cao":"ㄘㄠ","ce":"ㄘㄜ","cen":"ㄘㄣ","ceng":"ㄘㄥ","cha":"ㄔㄚ","chai":"ㄔㄞ","chan":"ㄔㄤ","chang":"ㄔㄤ","chao":"ㄔㄠ","che":"ㄔㄜ","chen":"ㄔㄣ","cheng":"ㄔㄥ","chi":"ㄔ","chong":"ㄔㄨㄥ","chou":"ㄔㄡ","chu":"ㄔㄨ","chua":"ㄔㄨㄚ","chuai":"ㄔㄨㄞ","chuan":"ㄔㄨㄢ","chuang":"ㄔㄨㄤ","chui":"ㄔㄨㄟ","chun":"ㄔㄨㄣ","chuo":"ㄔㄨㄛ","ci":"ㄘ","cong":"ㄘㄨㄥ","cou":"ㄘㄡ","cu":"ㄘㄨ","cuan":"ㄘㄨㄢ","cui":"ㄘㄨㄟ","cun":"ㄘㄨㄣ","cuo":"ㄘㄨㄛ","da":"ㄉㄚ","dai":"ㄉㄞ","dan":"ㄉㄢ","dang":"ㄉㄤ","dao":"ㄉㄠ","de":"ㄉㄜ","dei":"ㄉㄟ","den":"ㄉㄣ","deng":"ㄉㄥ","di":"ㄉㄧ","dian":"ㄉㄧㄢ","diao":"ㄉㄧㄠ","die":"ㄉㄧㄝ","ding":"ㄉㄧㄥ","diu":"ㄉㄧㄡ","dong":"ㄉㄨㄥ","dou":"ㄉㄡ","du":"ㄉㄨ","duan":"ㄉㄨㄢ","dui":"ㄉㄨㄟ","dun":"ㄉㄨㄣ","duo":"ㄉㄨㄛ","e":"ㄜ","ei":"ㄟ","en":"ㄣ","eng":"ㄥ","er":"ㄦ","fa":"ㄈㄚ","fan":"ㄈㄢ","fang":"ㄈㄤ","fei":"ㄈㄟ","fen":"ㄈㄣ","feng":"ㄈㄥ","fo":"ㄈㄛ","fou":"ㄈㄡ","fu":"ㄈㄨ","ga":"ㄍㄚ","gai":"ㄍㄞ","gan":"ㄍㄢ","gang":"ㄍㄤ","gao":"ㄍㄠ","ge":"ㄍㄜ","gei":"ㄍㄟ","gen":"ㄍㄣ","geng":"ㄍㄥ","gong":"ㄍㄨㄥ","gou":"ㄍㄡ","gu":"ㄍㄨ","gua":"ㄍㄨㄚ","guai":"ㄍㄨㄞ","guan":"ㄍㄨㄢ","guang":"ㄍㄨㄤ","gui":"ㄍㄨㄟ","gun":"ㄍㄨㄣ","guo":"ㄍㄨㄛ","ha":"ㄏㄚ","hai":"ㄏㄞ","han":"ㄏㄢ","hang":"ㄏㄤ","hao":"ㄏㄠ","he":"ㄏㄜ","hei":"ㄏㄟ","hen":"ㄏㄣ","heng":"ㄏㄥ","hong":"ㄏㄨㄥ","hou":"ㄏㄡ","hu":"ㄏㄨ","hua":"ㄏㄨㄚ","huai":"ㄏㄨㄞ","huan":"ㄏㄨㄢ","huang":"ㄏㄨㄤ","hui":"ㄏㄨㄟ","hun":"ㄏㄨㄣ","huo":"ㄏㄨㄛ","ji":"ㄐㄧ","jia":"ㄐㄧㄚ","jian":"ㄐㄧㄢ","jiang":"ㄐㄧㄤ","jiao":"ㄐㄧㄠ","jie":"ㄐㄧㄝ","jin":"ㄐㄧㄣ","jing":"ㄐㄧㄥ","jiong":"ㄐㄩㄥ","jiu":"ㄐㄧㄡ","ju":"ㄐㄩ","juan":"ㄐㄩㄢ","jue":"ㄐㄩㄝ","jun":"ㄐㄩㄣ","ka":"ㄎㄚ","kai":"ㄎㄞ","kan":"ㄎㄢ","kang":"ㄎㄤ","kao":"ㄎㄠ","ke":"ㄎㄜ","kei":"ㄎㄟ","ken":"ㄎㄣ","keng":"ㄎㄥ","kong":"ㄎㄨㄥ","kou":"ㄎㄡ","ku":"ㄎㄨ","kua":"ㄎㄨㄚ","kuai":"ㄎㄨㄞ","kuan":"ㄎㄨㄢ","kuang":"ㄎㄨㄤ","kui":"ㄎㄨㄟ","kun":"ㄎㄨㄣ","kuo":"ㄎㄨㄛ","la":"ㄌㄚ","lai":"ㄌㄞ","lan":"ㄌㄢ","lang":"ㄌㄤ","lao":"ㄌㄠ","le":"ㄌㄜ","lei":"ㄌㄟ","leng":"ㄌㄥ","li":"ㄌㄧ","lia":"ㄌㄧㄚ","lian":"ㄌㄧㄢ","liang":"ㄌㄧㄤ","liao":"ㄌㄧㄠ","lie":"ㄌㄧㄝ","lin":"ㄌㄧㄣ","ling":"ㄌㄧㄥ","liu":"ㄌㄧㄡ","lo":"ㄌㄛ","long":"ㄌㄨㄥ","lou":"ㄌㄡ","lu":"ㄌㄨ","luan":"ㄌㄨㄢ","lun":"ㄌㄨㄣ","luo":"ㄌㄨㄛ","lv":"ㄌㄩ","lve":"ㄌㄩㄝ","ma":"ㄇㄚ","mai":"ㄇㄞ","man":"ㄇㄢ","mang":"ㄇㄤ","mao":"ㄇㄠ","me":"ㄇㄜ","mei":"ㄇㄟ","men":"ㄇㄣ","meng":"ㄇㄥ","mi":"ㄇㄧ","mian":"ㄇㄧㄢ","miao":"ㄇㄧㄠ","mie":"ㄇㄧㄝ","min":"ㄇㄧㄣ","ming":"ㄇㄧㄥ","miu":"ㄇㄧㄡ","mo":"ㄇㄛ","mou":"ㄇㄡ","mu":"ㄇㄨ","na":"ㄋㄚ","nai":"ㄋㄞ","nan":"ㄋㄢ","nang":"ㄋㄤ","nao":"ㄋㄠ","ne":"ㄋㄜ","nei":"ㄋㄟ","nen":"ㄋㄣ","neng":"ㄋㄥ","ni":"ㄋㄧ","nian":"ㄋㄧㄢ","niang":"ㄋㄧㄤ","niao":"ㄋㄧㄠ","nie":"ㄋㄧㄝ","nin":"ㄋㄧㄣ","ning":"ㄋㄧㄥ","niu":"ㄋㄧㄡ","nong":"ㄋㄨㄥ","nou":"ㄋㄡ","nu":"ㄋㄨ","nuan":"ㄋㄨㄢ","nun":"ㄋㄨㄣ","nuo":"ㄋㄨㄛ","nv":"ㄋㄩ","nve":"ㄋㄩㄝ","o":"ㄛ","ou":"ㄡ","pa":"ㄆㄚ","pai":"ㄆㄞ","pan":"ㄆㄢ","pang":"ㄆㄤ","pao":"ㄆㄠ","pei":"ㄆㄟ","pen":"ㄆㄣ","peng":"ㄆㄥ","pi":"ㄆㄧ","pian":"ㄆㄧㄢ","piao":"ㄆㄧㄠ","pie":"ㄆㄧㄝ","pin":"ㄆㄧㄣ","ping":"ㄆㄧㄥ","po":"ㄆㄛ","pou":"ㄆㄡ","pu":"ㄆㄨ","qi":"ㄑㄧ","qia":"ㄑㄧㄚ","qian":"ㄑㄧㄢ","qiang":"ㄑㄧㄤ","qiao":"ㄑㄧㄠ","qie":"ㄑㄧㄝ","qin":"ㄑㄧㄣ","qing":"ㄑㄧㄥ","qiong":"ㄑㄩㄥ","qiu":"ㄑㄧㄡ","qu":"ㄑㄩ","quan":"ㄑㄩㄢ","que":"ㄑㄩㄝ","qun":"ㄑㄩㄣ","ran":"ㄖㄢ","rang":"ㄖㄤ","rao":"ㄖㄠ","re":"ㄖㄜ","ren":"ㄖㄣ","reng":"ㄖㄥ","ri":"ㄖ","rong":"ㄖㄨㄥ","rou":"ㄖㄡ","ru":"ㄖㄨ","ruan":"ㄖㄨㄢ","rui":"ㄖㄨㄟ","run":"ㄖㄨㄣ","ruo":"ㄖㄨㄛ","sa":"ㄙㄚ","sai":"ㄙㄞ","san":"ㄙㄢ","sang":"ㄙㄤ","sao":"ㄙㄠ","se":"ㄙㄜ","sen":"ㄙㄣ","seng":"ㄙㄥ","sha":"ㄕㄚ","shai":"ㄕㄞ","shan":"ㄕㄢ","shang":"ㄕㄤ","shao":"ㄕㄠ","she":"ㄕㄜ","shei":"ㄕㄟ","shen":"ㄕㄣ","sheng":"ㄕㄥ","shi":"ㄕ","shou":"ㄕㄡ","shu":"ㄕㄨ","shua":"ㄕㄨㄚ","shuai":"ㄕㄨㄞ","shuan":"ㄕㄨㄢ","shuang":"ㄕㄨㄤ","shui":"ㄕㄨㄟ","shun":"ㄕㄨㄣ","shuo":"ㄕㄨㄛ","si":"ㄙ","song":"ㄙㄨㄥ","sou":"ㄙㄡ","su":"ㄙㄨ","suan":"ㄙㄨㄢ","sui":"ㄙㄨㄟ","sun":"ㄙㄨㄣ","suo":"ㄙㄨㄛ","ta":"ㄊㄚ","tai":"ㄊㄞ","tan":"ㄊㄢ","tang":"ㄊㄤ","tao":"ㄊㄠ","te":"ㄊㄜ","teng":"ㄊㄥ","ti":"ㄊㄧ","tian":"ㄊㄧㄢ","tiao":"ㄊㄧㄠ","tie":"ㄊㄧㄝ","ting":"ㄊㄧㄥ","tong":"ㄊㄨㄥ","tou":"ㄊㄡ","tu":"ㄊㄨ","tuan":"ㄊㄨㄢ","tui":"ㄊㄨㄟ","tun":"ㄊㄨㄣ","tuo":"ㄊㄨㄛ","wa":"ㄨㄚ","wai":"ㄨㄞ","wan":"ㄨㄢ","wang":"ㄨㄤ","wei":"ㄨㄟ","wen":"ㄨㄣ","weng":"ㄨㄥ","wo":"ㄨㄛ","wu":"ㄨ","xi":"ㄒㄧ","xia":"ㄒㄧㄚ","xian":"ㄒㄧㄢ","xiang":"ㄒㄧㄤ","xiao":"ㄒㄧㄠ","xie":"ㄒㄧㄝ","xin":"ㄒㄧㄣ","xing":"ㄒㄧㄥ","xiong":"ㄒㄩㄥ","xiu":"ㄒㄧㄡ","xu":"ㄒㄩ","xuan":"ㄒㄩㄢ","xue":"ㄒㄩㄝ","xun":"ㄒㄩㄣ","ya":"ㄧㄚ","yan":"ㄧㄢ","yang":"ㄧㄤ","yao":"ㄧㄠ","ye":"ㄧㄝ","yi":"ㄧ","yin":"ㄧㄣ","ying":"ㄧㄥ","yo":"ㄧㄛ","yong":"ㄩㄥ","you":"ㄧㄡ","yu":"ㄩ","yuan":"ㄩㄢ","yue":"ㄩㄝ","yun":"ㄩㄣ","za":"ㄗㄚ","zai":"ㄗㄞ","zan":"ㄗㄢ","zang":"ㄗㄤ","zao":"ㄗㄠ","ze":"ㄗㄜ","zei":"ㄗㄟ","zen":"ㄗㄣ","zeng":"ㄗㄥ","zha":"ㄓㄚ","zhai":"ㄓㄞ","zhan":"ㄓㄢ","zhang":"ㄓㄤ","zhao":"ㄓㄠ","zhe":"ㄓㄜ","zhei":"ㄓㄟ","zhen":"ㄓㄣ","zheng":"ㄓㄥ","zhi":"ㄓ","zhong":"ㄓㄨㄥ","zhou":"ㄓㄡ","zhu":"ㄓㄨ","zhua":"ㄓㄨㄚ","zhuai":"ㄓㄨㄞ","zhuan":"ㄓㄨㄢ","zhuang":"ㄓㄨㄤ","zhui":"ㄓㄨㄟ","zhun":"ㄓㄨㄣ","zhuo":"ㄓㄨㄛ","zi":"ㄗ","zong":"ㄗㄨㄥ","zou":"ㄗㄡ","zu":"ㄗㄨ","zuan":"ㄗㄨㄢ","zui":"ㄗㄨㄟ","zun":"ㄗㄨㄣ","zuo":"ㄗㄨㄛ"};
 
-        /* 👑 核心優化：精準辨識原生注音符號 (例如「ㄅ」) 👑 */
+        /* 判斷是否為注音符號或聲調符號 */
+        function isBopomofoChar(char) {
+            if (!char) return false;
+            const code = char.charCodeAt(0);
+            return (code >= 0x3100 && code <= 0x312F) || (code >= 0x31A0 && code <= 0x31BA) || ['ˊ','ˇ','ˋ','˙'].includes(char);
+        }
+
+        /* 拆解文字為單格物件：連續英數字自動合併為一格，半形空白作為分隔符不佔格 */
         function generateRubyData(text) {
             let result = [];
-            const regex = /([a-zA-Z0-9.\s~-]+)|(.)/g;
+            const regex = /([a-zA-Z0-9.~_-]+)|(.)/g;
             let match;
-            
-            // 判斷是否為注音符號的函式 (涵蓋標準注音與擴充注音 Unicode 範圍)
-            const isBopomofo = (char) => {
-                const code = char.charCodeAt(0);
-                return (code >= 0x3100 && code <= 0x312F) || (code >= 0x31A0 && code <= 0x31BA);
-            };
 
             while ((match = regex.exec(text)) !== null) {
                 if (match[1]) {
                     result.push({ char: match[1], bpmf: '', type: 'eng-num' });
                 } else if (match[2]) {
                     const char = match[2];
-                    
-                    // ✨✨ 關鍵：攔截原生注音符號！✨✨
-                    if (isBopomofo(char)) {
-                        result.push({ char: char, bpmf: char, type: 'char', isBopomofoOnly: true });
+                    if (char === ' ') continue;
+                    if (char === '　') {
+                        result.push({ char: '', bpmf: '', type: 'punct' });
                         continue;
                     }
                     
-                    if (/[a-zA-Z0-9\s，。！？、；：()（）_《》「」【】.]/.test(char)) {
+                    if (isBopomofoChar(char)) {
+                        let combinedBpmf = char;
+                        while (regex.lastIndex < text.length) {
+                            const nextChar = text[regex.lastIndex];
+                            if (['ˊ','ˇ','ˋ','˙'].includes(nextChar)) {
+                                combinedBpmf += nextChar;
+                                regex.lastIndex++;
+                            } else {
+                                break;
+                            }
+                        }
+                        result.push({ char: combinedBpmf, bpmf: combinedBpmf, type: 'char', isBopomofoOnly: true });
+                        continue;
+                    }
+                    
+                    if (/[，。！？、；：()（）《》「」【】]/.test(char)) {
                         result.push({ char: char, bpmf: '', type: 'punct' });
                     } else {
                         try {
@@ -684,7 +1024,7 @@
                                 continue;
                             }
                             let pyStr = pyRes[0];
-                            let m = pyStr.toLowerCase().match(/([a-z]+)(\d)?/);
+                            let m = pyStr.toLowerCase().match(/([a-züv]+)(\d)?/);
                             if (!m) {
                                 result.push({ char: char, bpmf: '', type: 'char' });
                                 continue;
@@ -697,7 +1037,10 @@
                                 result.push({ char: char, bpmf: '', type: 'char' });
                                 continue;
                             }
-                            if (tone === '2') bpmf += 'ˊ'; else if (tone === '3') bpmf += 'ˇ'; else if (tone === '4') bpmf += 'ˋ'; else if (tone === '0') bpmf = '˙' + bpmf;
+                            if (tone === '2') bpmf += 'ˊ';
+                            else if (tone === '3') bpmf += 'ˇ';
+                            else if (tone === '4') bpmf += 'ˋ';
+                            else if (tone === '0') bpmf = '˙' + bpmf;
                             result.push({ char: char, bpmf: bpmf, type: 'char' });
                         } catch(e) {
                             result.push({ char: char, bpmf: '', type: 'char' });
@@ -713,17 +1056,12 @@
             return list.map(item => {
                 if (typeof item === 'string') return { rawText: item, rubyData: generateRubyData(item) };
                 else if (item && typeof item === 'object') {
-                    // 如果沒有 rubyData (極舊格式)，就重新生成
                     if (!item.rubyData) {
                         item.rubyData = generateRubyData(item.rawText || "");
                     } else {
-                        // 🌟 關鍵修復：保留手動修改的注音，只針對舊資料補上 isBopomofoOnly 標記！
-                        const isBopomofo = (char) => {
-                            const code = char.charCodeAt(0);
-                            return (code >= 0x3100 && code <= 0x312F) || (code >= 0x31A0 && code <= 0x31BA);
-                        };
+                        item.rubyData = item.rubyData.filter(rObj => !(rObj.type === 'punct' && rObj.char === ' '));
                         item.rubyData.forEach(rObj => {
-                            if (rObj.type === 'char' && isBopomofo(rObj.char) && !rObj.hasOwnProperty('isBopomofoOnly')) {
+                            if (rObj.type === 'char' && isBopomofoChar(rObj.char) && !rObj.hasOwnProperty('isBopomofoOnly')) {
                                 rObj.isBopomofoOnly = true;
                             }
                         });
@@ -734,57 +1072,57 @@
             });
         }
 
-        function getRubyHTMLFromData(rubyData, currentWritingMode) {
-            let htmlStr = "";
-            (rubyData || []).forEach(r => {
-                if (r.type === 'eng-num') {
-                    htmlStr += `<span class="eng-num">${r.char}</span>`;
-                } else if (r.type === 'punct') {
-                    htmlStr += `<span class="punct">${r.char}</span>`;
-                } else if (r.type === 'char') {
-                    if (r.bpmf && currentWritingMode === 'vertical') {
-                        let sym = r.bpmf; let tone = ''; let isLight = false;
-                        if (sym.startsWith('˙')) { isLight = true; sym = sym.substring(1); tone = '˙'; }
-                        else { 
-                            const last = sym.slice(-1); 
-                            if (['ˊ','ˇ','ˋ'].includes(last)) { tone = last; sym = sym.slice(0, -1); } 
-                        }
-                        const symHtml = sym.split('').map(c => `<span>${c}</span>`).join('');
-                        
-                        let extraClass = 'has-ruby' + (isLight ? ' has-light-tone' : '') + (r.isBopomofoOnly ? ' bopomofo-only-char' : '');
-                        
-                        // ✨ 終極版注音包裝結構 (bopo-wrapper) ✨
-                        htmlStr += `<span class="moe-char-vert ${extraClass}">
-                            <span class="moe-rb">${r.char}</span>
-                            <span class="moe-rt">
-                                <span class="bopo-wrapper">
-                                    ${isLight ? `<span class="tone-light">˙</span>` : ''}
-                                    <span class="sym">${symHtml}</span>
-                                    ${tone && !isLight ? `<span class="tone">${tone}</span>` : ''}
-                                </span>
-                            </span>
-                        </span>`;
-                    } else if (r.bpmf && currentWritingMode === 'horizontal') {
-                        let extraClass = r.isBopomofoOnly ? ' class="bopomofo-only-char"' : '';
-                        htmlStr += `<ruby${extraClass}><rb>${r.char}</rb><rt>${r.bpmf}</rt></ruby>`;
-                    } else {
-                        htmlStr += (currentWritingMode === 'vertical') ? `<span class="moe-char-vert no-ruby"><span class="moe-rb">${r.char}</span></span>` : `<span class="char">${r.char}</span>`;
-                    }
+        /* 👑 教育部標準直式注音生成器：聲調精準鎖定在最後一個注音符號右側 👑 */
+        function buildVerticalBopoHTML(bpmfStr) {
+            if (!bpmfStr) return '';
+            let sym = bpmfStr.trim();
+            let tone = '';
+            let isLight = false;
+
+            if (sym.startsWith('˙')) {
+                isLight = true;
+                sym = sym.substring(1);
+                tone = '˙';
+            } else if (sym.endsWith('˙')) {
+                isLight = true;
+                sym = sym.slice(0, -1);
+                tone = '˙';
+            } else {
+                const last = sym.slice(-1);
+                if (['ˊ', 'ˇ', 'ˋ'].includes(last)) {
+                    tone = last;
+                    sym = sym.slice(0, -1);
                 }
+            }
+
+            const chars = sym.split('');
+            const lenClass = `len-${Math.min(3, Math.max(1, chars.length))}`;
+            const sideToneClass = (tone && !isLight) ? 'with-side-tone' : '';
+
+            let symHtml = '';
+            chars.forEach((c, idx) => {
+                const isLast = (idx === chars.length - 1);
+                const sideToneSpan = (isLast && tone && !isLight) ? `<span class="tone-side-mark">${tone}</span>` : '';
+                symHtml += `<span class="sym-char">${c}${sideToneSpan}</span>`;
             });
-            return htmlStr;
+
+            return `<span class="bopo-box ${lenClass} ${sideToneClass}">
+                ${isLight ? `<span class="tone-light-mark">˙</span>` : ''}
+                ${symHtml}
+            </span>`;
         }
 
-        // --- STATE ---
+        // --- 狀態變數 ---
         let currentDateStr = "";
-        let currentData = { leftList: [], rightList: [], absentText: "", dutyText: "", leaves: {}, checkins: {} };
+        let currentData = { morningList: [], leftList: [], rightList: [], absentText: "", dutyText: "", leaves: {}, checkins: {} };
         let allLocalData = {}; 
         
         let globalSettings = {
             maxSeat: 35,
             excludedSeats: [],
             lateTime: "07:50",
-            semesterStartDate: ""
+            semesterStartDate: "",
+            gridRows: 5
         };
 
         let tempLeaves = {};
@@ -797,20 +1135,23 @@
 
         const LOCAL_KEY = 'blackboard_low_data'; 
         const GLOBAL_SETTING_KEY = 'board_global_settings_low';
-        
-        let splitRatio = localStorage.getItem('board_split_ratio_low') ? parseFloat(localStorage.getItem('board_split_ratio_low')) : 35;
-        let writingMode = localStorage.getItem('board_writing_mode_low') || 'vertical'; 
-        let displayMode = parseInt(localStorage.getItem('board_display_mode_low') || '0');
-        const modeClasses = ['', 'mode-char-only', 'mode-bpmf-only'];
+        const PANEL_STATE_KEY = 'board_panel_state_v3';
 
-        let leftFontScale = parseFloat(localStorage.getItem('board_left_scale_low')) || 1;
-        let rightFontScale = parseFloat(localStorage.getItem('board_right_scale_low')) || 1.4;
+        // 三區塊顯示、寬度權重與字體縮放狀態
+        let panelState = {
+            morning: { visible: true, weight: 30, scale: 1.05 },
+            left:    { visible: true, weight: 30, scale: 1.05 },
+            right:   { visible: true, weight: 40, scale: 1.15 }
+        };
+
+        let displayMode = parseInt(localStorage.getItem('board_display_mode_low') || '0');
+        const modeNames = ['國字＋注音', '純國字', '純注音'];
 
         let editingSide = null;
         let editingIndex = null;
         let promptCallback = null;
 
-        // --- DOM ---
+        // --- 畫面元件參照 ---
         const els = {
             setupDatePicker: document.getElementById('setup-date-picker'),
             saveIndicator: document.getElementById('save-indicator'),
@@ -826,22 +1167,29 @@
             loading: document.getElementById('loading-overlay'),
             setupScreen: document.getElementById('setup-screen'),
             dashboardScreen: document.getElementById('dashboard-screen'),
-            leftPanel: document.getElementById('left-panel'),
             dashboardLayout: document.getElementById('dashboard-layout'),
-            resizer: document.getElementById('resizer'),
+            panelMorning: document.getElementById('panel-morning'),
+            panelLeft: document.getElementById('panel-left'),
+            panelRight: document.getElementById('panel-right'),
+            resizer1: document.getElementById('resizer-1'),
+            resizer2: document.getElementById('resizer-2'),
             absentModal: document.getElementById('absent-modal'),
             seatGrid: document.getElementById('seat-grid'),
             attendanceBar: document.getElementById('attendance-bar'),
             promptModal: document.getElementById('custom-prompt-modal'),
-            promptInput: document.getElementById('prompt-input')
+            promptInput: document.getElementById('prompt-input'),
+            gridRowsLabel: document.getElementById('grid-rows-label'),
+            toggleDisplayBtn: document.getElementById('toggle-display-btn')
         };
 
         window.onload = () => {
             initDate();
+            loadPanelState();
             initApp();
-            applySplitRatio();
+            applyPanelLayout();
             applyFontScales();
             applyDisplayMode();
+            initResizers();
             setInterval(updateClock, 1000);
             updateClock();
         };
@@ -853,6 +1201,26 @@
             if (els.setupDatePicker) els.setupDatePicker.value = currentDateStr;
         }
 
+        function loadPanelState() {
+            try {
+                const saved = localStorage.getItem(PANEL_STATE_KEY);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.morning) panelState.morning = { ...panelState.morning, ...parsed.morning };
+                    if (parsed.left)    panelState.left    = { ...panelState.left, ...parsed.left };
+                    if (parsed.right)   panelState.right   = { ...panelState.right, ...parsed.right };
+                }
+            } catch (e) { console.error(e); }
+            // 確保至少有一個區塊開啟
+            if (!panelState.morning.visible && !panelState.left.visible && !panelState.right.visible) {
+                panelState.right.visible = true;
+            }
+        }
+
+        function savePanelState() {
+            localStorage.setItem(PANEL_STATE_KEY, JSON.stringify(panelState));
+        }
+
         function initApp() {
             const stored = localStorage.getItem(LOCAL_KEY);
             if(stored) allLocalData = JSON.parse(stored);
@@ -861,6 +1229,9 @@
             if(localSettings) globalSettings = {...globalSettings, ...JSON.parse(localSettings)};
             if (!globalSettings.semesterStartDate) {
                 globalSettings.semesterStartDate = currentDateStr;
+            }
+            if (!globalSettings.gridRows || globalSettings.gridRows < 3) {
+                globalSettings.gridRows = 5;
             }
 
             if (typeof firebase !== 'undefined') {
@@ -881,7 +1252,7 @@
 
         function handleLoginSuccess(u) {
             isCloud = true;
-            els.cloudStatus.textContent = `已連線: ${u.displayName}`;
+            els.cloudStatus.textContent = `已連線：${u.displayName}`;
             els.cloudStatus.style.color = '#2ecc71';
             els.cloudDot.classList.add('online');
             els.btnLogin.style.display = 'none';
@@ -890,6 +1261,7 @@
             db.collection('users').doc(u.uid).collection('settings_low').doc('global').get().then(doc => {
                 if(doc.exists) {
                     globalSettings = {...globalSettings, ...doc.data()};
+                    if (!globalSettings.gridRows) globalSettings.gridRows = 5;
                 }
                 renderGlobalSettingsUI();
                 loadDataForDate(currentDateStr);
@@ -913,6 +1285,8 @@
             document.getElementById('setting-excluded-seats').value = globalSettings.excludedSeats.join(', ');
             document.getElementById('setting-late-time').value = globalSettings.lateTime;
             document.getElementById('setting-semester-start').value = globalSettings.semesterStartDate;
+            document.getElementById('setting-grid-rows').value = globalSettings.gridRows || 5;
+            if (els.gridRowsLabel) els.gridRowsLabel.textContent = `直行 ${globalSettings.gridRows || 5} 格`;
         }
 
         window.saveGlobalSettings = function() {
@@ -921,8 +1295,10 @@
             globalSettings.excludedSeats = exclStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
             globalSettings.lateTime = document.getElementById('setting-late-time').value || "07:50";
             globalSettings.semesterStartDate = document.getElementById('setting-semester-start').value;
+            globalSettings.gridRows = Math.max(3, Math.min(12, parseInt(document.getElementById('setting-grid-rows').value) || 5));
 
             localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify(globalSettings));
+            renderGlobalSettingsUI();
             
             if(isCloud && user) {
                 db.collection('users').doc(user.uid).collection('settings_low').doc('global').set(globalSettings)
@@ -933,12 +1309,27 @@
             renderDashboardUI(); 
         }
 
+        /* 在黑板上方直接調整直行格數 */
+        window.adjustGridRows = function(delta) {
+            const currentRows = globalSettings.gridRows || 5;
+            const nextRows = Math.max(3, Math.min(12, currentRows + delta));
+            if (nextRows === currentRows) return;
+            globalSettings.gridRows = nextRows;
+            localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify(globalSettings));
+            if (isCloud && user) {
+                db.collection('users').doc(user.uid).collection('settings_low').doc('global').set(globalSettings);
+            }
+            renderGlobalSettingsUI();
+            renderDashboardUI();
+        };
+
         function loadDataForDate(date) {
             currentDateStr = date;
             els.setupDatePicker.value = date;
-            currentData = { leftList: [], rightList: [], absentText: "", dutyText: "", leaves: {}, checkins: {} };
+            currentData = { morningList: [], leftList: [], rightList: [], absentText: "", dutyText: "", leaves: {}, checkins: {} };
 
             const processData = (data) => {
+                currentData.morningList = upgradeDataStructure(data.morningList);
                 currentData.leftList = upgradeDataStructure(data.leftList);
                 currentData.rightList = upgradeDataStructure(data.rightList);
                 currentData.dutyText = data.dutyText || "";
@@ -975,6 +1366,12 @@
                 localStorage.setItem(LOCAL_KEY, JSON.stringify(allLocalData));
             }
             renderDashboardUI();
+        }
+
+        function getListBySide(side) {
+            if (side === 'morning') return currentData.morningList;
+            if (side === 'left') return currentData.leftList;
+            return currentData.rightList;
         }
 
         window.openAbsentModal = function() {
@@ -1062,10 +1459,10 @@
             
             if(summaryText === "") {
                 els.displayAbsent.textContent = "全勤";
-                els.displayAbsent.style.color = 'rgba(255,255,255,0.5)';
+                els.displayAbsent.style.color = 'rgba(255,255,255,0.6)';
             } else {
                 els.displayAbsent.textContent = summaryText;
-                els.displayAbsent.style.color = '#ff6b6b';
+                els.displayAbsent.style.color = '#ff7675';
             }
         }
 
@@ -1093,7 +1490,7 @@
 
         window.openStatsModal = async function() {
             document.getElementById('stats-modal').style.display = 'flex';
-            document.getElementById('stats-date-range').textContent = `${globalSettings.semesterStartDate} ~ 至今`;
+            document.getElementById('stats-date-range').textContent = `${globalSettings.semesterStartDate} ～ 至今`;
             const tbody = document.getElementById('stats-tbody');
             tbody.innerHTML = '<tr><td colspan="7">資料計算中，請稍候...</td></tr>';
 
@@ -1183,45 +1580,194 @@
                     html += `<div class="setup-list-item"><span><b style="color:#2980b9">${idx+1}.</b> ${text}</span>
                         <div style="display:flex; gap:5px;">
                             <button class="btn-edit" onclick="editItemText('${side}', ${idx})">✎ 編輯</button>
-                            <button class="btn-primary" style="padding: 5px 10px; font-size: 0.9em; background:#9b59b6; border: 1px solid #8e44ad;" onclick="openBpmfEditor('${side}', ${idx})">ㄅㄆㄇ 注音</button>
+                            <button class="btn-primary" style="padding: 6px 12px; font-size: 0.95em; background:#9b59b6; border: 1px solid #8e44ad;" onclick="openBpmfEditor('${side}', ${idx})">ㄅㄆㄇ 注音與顯示</button>
                             <button class="btn-danger" onclick="removeItem('${side}', ${idx})">刪除</button>
                         </div></div>`;
                 });
                 return html;
             };
+            document.getElementById('morning-setup-list').innerHTML = buildListHTML(currentData.morningList || [], 'morning');
             document.getElementById('left-setup-list').innerHTML = buildListHTML(currentData.leftList || [], 'left');
             document.getElementById('right-setup-list').innerHTML = buildListHTML(currentData.rightList || [], 'right');
+        }
+
+        function speakText(text) {
+            if (!text) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'zh-TW';
+            u.rate = 0.85;
+            window.speechSynthesis.speak(u);
+        }
+
+        function formatChineseDate(dateStr) {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[0]}年${parts[1]}月${parts[2]}日`;
+            }
+            return dateStr;
         }
 
         function renderDashboardUI() {
             const dateObj = new Date(currentDateStr);
             const days = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
             
-            els.dateDisplay.textContent = currentDateStr.replace(/-/g, '/');
+            els.dateDisplay.textContent = formatChineseDate(currentDateStr);
             els.dayDisplay.textContent = days[dateObj.getDay()];
             document.getElementById('display-duty').textContent = currentData.dutyText || "無";
+            if (els.gridRowsLabel) els.gridRowsLabel.textContent = `直行 ${globalSettings.gridRows || 5} 格`;
             
             renderAttendanceBar(); 
             
-            renderBoardList(document.getElementById('display-left-list'), currentData.leftList, "(無提醒)");
-            renderBoardList(document.getElementById('display-right-list'), currentData.rightList, "(今日無作業)");
+            // 三欄全部採用直式方格渲染器，搭配各自專屬主題與單點切換
+            renderVerticalGrid(document.getElementById('display-morning-list'), currentData.morningList, 'morning', 'board-theme-morning', '（無晨間任務）', 3);
+            renderVerticalGrid(document.getElementById('display-left-list'), currentData.leftList, 'left', 'board-theme-left', '（無提醒事項）', 3);
+            renderVerticalGrid(document.getElementById('display-right-list'), currentData.rightList, 'right', 'board-theme-right', '（今日無作業）', 5);
         }
 
-        function renderBoardList(container, list, emptyMsg) {
+        /* 👑 共用直式方格渲染引擎（由右至左、一字一格、奇偶底色交錯、滿格自動同色折行） 👑 */
+        function renderVerticalGrid(container, list, side, themeClass, emptyMsg, minEmptyCols) {
             container.innerHTML = '';
-            if (writingMode === 'vertical') { container.classList.add('vertical'); container.classList.remove('horizontal'); } 
-            else { container.classList.add('horizontal'); container.classList.remove('vertical'); }
+            const rowsPerCol = Math.max(3, Math.min(12, parseInt(globalSettings.gridRows) || 5));
 
-            if(!list || list.length === 0) container.innerHTML = `<div style="opacity:0.5; font-size:1.5rem; margin-top:10px;">${emptyMsg}</div>`;
-            else {
-                list.forEach((item, idx) => {
-                    const containerDiv = document.createElement('div'); containerDiv.className = 'list-item-container'; 
-                    containerDiv.onclick = () => { window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(item.rawText); u.lang = 'zh-TW'; u.rate = 0.85; window.speechSynthesis.speak(u); };
-                    const el = document.createElement('div'); el.className = 'list-item-text'; el.innerHTML = getRubyHTMLFromData(item.rubyData, writingMode);
-                    const circle = document.createElement('div'); circle.className = 'circle-number'; circle.textContent = idx + 1;
-                    containerDiv.appendChild(circle); containerDiv.appendChild(el); container.appendChild(containerDiv);
-                });
+            if (!list || list.length === 0) {
+                container.innerHTML = `<div style="opacity:0.55; font-size:1.5rem; margin:auto; font-weight:bold;">${emptyMsg}</div>`;
+                return;
             }
+
+            const board = document.createElement('div');
+            board.className = `contact-grid-board ${themeClass}`;
+
+            let totalColsRendered = 0;
+
+            list.forEach((item, itemIdx) => {
+                const isOddItem = (itemIdx % 2 === 0);
+                const bgClass = isOddItem ? 'item-odd' : 'item-even';
+                const tokens = (item.rubyData || []).map((rObj, tokenIdx) => ({ rObj, tokenIdx }));
+
+                const chunks = [];
+                if (tokens.length === 0) {
+                    chunks.push([]);
+                } else {
+                    for (let i = 0; i < tokens.length; i += rowsPerCol) {
+                        chunks.push(tokens.slice(i, i + rowsPerCol));
+                    }
+                }
+
+                chunks.forEach((chunk, chunkIdx) => {
+                    totalColsRendered++;
+                    const colDiv = document.createElement('div');
+                    colDiv.className = `grid-col ${bgClass}`;
+
+                    // 1. 頂部第一大格：項次格
+                    const headerCell = document.createElement('div');
+                    headerCell.className = 'grid-cell header-cell';
+                    if (chunkIdx === 0) {
+                        headerCell.classList.add('has-num');
+                        headerCell.textContent = itemIdx + 1;
+                        headerCell.title = '點擊朗讀此項目';
+                        headerCell.onclick = () => speakText(item.rawText);
+                    }
+                    colDiv.appendChild(headerCell);
+
+                    // 2. 下方內容格
+                    for (let r = 0; r < rowsPerCol; r++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+
+                        if (r < chunk.length) {
+                            const { rObj, tokenIdx } = chunk[r];
+                            populateGridCell(cell, rObj, side, itemIdx, tokenIdx);
+                        }
+                        colDiv.appendChild(cell);
+                    }
+
+                    board.appendChild(colDiv);
+                });
+            });
+
+            // 預留至少 1 欄空白預備欄
+            const minCols = Math.max(minEmptyCols || 3, totalColsRendered + 1);
+            const nextIsOdd = (list.length % 2 === 0);
+            for (let c = totalColsRendered; c < minCols; c++) {
+                const emptyCol = document.createElement('div');
+                const emptyBg = ((c - totalColsRendered) % 2 === 0)
+                    ? (nextIsOdd ? 'item-odd' : 'item-even')
+                    : (nextIsOdd ? 'item-even' : 'item-odd');
+                emptyCol.className = `grid-col ${emptyBg}`;
+
+                const emptyHeader = document.createElement('div');
+                emptyHeader.className = 'grid-cell header-cell';
+                emptyCol.appendChild(emptyHeader);
+
+                for (let r = 0; r < rowsPerCol; r++) {
+                    const emptyCell = document.createElement('div');
+                    emptyCell.className = 'grid-cell';
+                    emptyCol.appendChild(emptyCell);
+                }
+                board.appendChild(emptyCol);
+            }
+
+            container.appendChild(board);
+        }
+
+        /* 填入單一方格內容，並綁定單格三態循環切換（國字＋注音 ➔ 純國字 ➔ 純注音） */
+        function populateGridCell(cell, rObj, side, itemIdx, tokenIdx) {
+            if (rObj.type === 'eng-num') {
+                const str = rObj.char || '';
+                let sizeClass = 'str-short';
+                if (str.length >= 7) sizeClass = 'str-xlong';
+                else if (str.length >= 5) sizeClass = 'str-long';
+                else if (str.length >= 3) sizeClass = 'str-med';
+
+                cell.innerHTML = `<span class="cell-eng-num ${sizeClass}">${str}</span>`;
+                return;
+            }
+
+            if (rObj.type === 'punct') {
+                cell.innerHTML = `<span class="cell-punct">${rObj.char || ''}</span>`;
+                return;
+            }
+
+            if (rObj.type === 'char') {
+                if (rObj.isBopomofoOnly) {
+                    cell.innerHTML = `<div class="cell-bpmf-only">${buildVerticalBopoHTML(rObj.bpmf || rObj.char)}</div>`;
+                    return;
+                }
+
+                // 0: 國字＋注音, 1: 純國字, 2: 純注音
+                const effectiveMode = (rObj.cellMode !== undefined && rObj.cellMode !== null)
+                    ? rObj.cellMode
+                    : displayMode;
+
+                if (!rObj.bpmf || effectiveMode === 1) {
+                    cell.innerHTML = `<div class="cell-char-only">${rObj.char}</div>`;
+                } else if (effectiveMode === 2) {
+                    cell.innerHTML = `<div class="cell-bpmf-only">${buildVerticalBopoHTML(rObj.bpmf)}</div>`;
+                } else {
+                    cell.innerHTML = `<div class="cell-both">
+                        <span class="both-char">${rObj.char}</span>
+                        ${buildVerticalBopoHTML(rObj.bpmf)}
+                    </div>`;
+                }
+
+                cell.classList.add('interactive-cell');
+                cell.title = '點擊切換此格：國字＋注音 ／ 純國字 ／ 純注音';
+                cell.onclick = (e) => {
+                    e.stopPropagation();
+                    toggleSingleCellMode(side, itemIdx, tokenIdx);
+                };
+            }
+        }
+
+        function toggleSingleCellMode(side, itemIdx, tokenIdx) {
+            const list = getListBySide(side);
+            const item = list[itemIdx];
+            if (!item || !item.rubyData || !item.rubyData[tokenIdx]) return;
+            const rObj = item.rubyData[tokenIdx];
+            const current = (rObj.cellMode !== undefined && rObj.cellMode !== null) ? rObj.cellMode : displayMode;
+            rObj.cellMode = (current + 1) % 3;
+            saveData();
         }
 
         window.addItem = function(side) {
@@ -1229,7 +1775,10 @@
             const val = input.value.trim();
             if(val) {
                 const newItem = { rawText: val, rubyData: generateRubyData(val) };
-                if(side === 'left') {
+                if(side === 'morning') {
+                    if(!currentData.morningList) currentData.morningList = [];
+                    currentData.morningList.push(newItem);
+                } else if(side === 'left') {
                     if(!currentData.leftList) currentData.leftList = [];
                     currentData.leftList.push(newItem);
                 } else {
@@ -1265,13 +1814,13 @@
         }
         
         window.removeItem = function(side, idx) {
-            if(side === 'left') currentData.leftList.splice(idx, 1); else currentData.rightList.splice(idx, 1);
+            const list = getListBySide(side);
+            list.splice(idx, 1);
             saveData(); renderSetupUI();
         }
 
-        // 使用 Modal 取代原生 prompt
         window.editItemText = function(side, idx) {
-            const list = side === 'left' ? currentData.leftList : currentData.rightList;
+            const list = getListBySide(side);
             els.promptInput.value = list[idx].rawText;
             els.promptModal.style.display = 'flex';
             els.promptInput.focus();
@@ -1323,46 +1872,201 @@
 
         function updateClock() {
             const now = new Date();
-            const h = now.getHours().toString().padStart(2,'0'); const m = now.getMinutes().toString().padStart(2,'0');
-            const ampm = now.getHours() >= 12 ? '下午' : '上午'; const h12 = now.getHours() % 12 || 12;
+            const m = now.getMinutes().toString().padStart(2,'0');
+            const ampm = now.getHours() >= 12 ? '下午' : '上午';
+            const h12 = now.getHours() % 12 || 12;
             if (els.digitalClock) els.digitalClock.textContent = `${ampm} ${h12.toString().padStart(2,'0')}:${m}`;
         }
 
-        // 版面控制 (放大縮小)
-        function applyFontScales() { document.documentElement.style.setProperty('--left-scale', leftFontScale); document.documentElement.style.setProperty('--right-scale', rightFontScale); }
+        // --- 三欄獨立方格縮放控制 ---
+        function applyFontScales() {
+            document.documentElement.style.setProperty('--morning-scale', panelState.morning.scale);
+            document.documentElement.style.setProperty('--left-scale', panelState.left.scale);
+            document.documentElement.style.setProperty('--right-scale', panelState.right.scale);
+        }
+
         window.adjustFont = function(side, delta) {
-            if (side === 'left') { leftFontScale = Math.max(0.5, Math.min(2.5, leftFontScale + delta)); localStorage.setItem('board_left_scale_low', leftFontScale); } 
-            else { rightFontScale = Math.max(0.5, Math.min(2.5, rightFontScale + delta)); localStorage.setItem('board_right_scale_low', rightFontScale); }
+            if (!panelState[side]) return;
+            panelState[side].scale = Math.max(0.6, Math.min(2.2, Math.round((panelState[side].scale + delta) * 10) / 10));
+            savePanelState();
             applyFontScales();
         };
-        function applySplitRatio() { els.leftPanel.style.width = `calc(${splitRatio}% - 8px)`; }
-        let isDragging = false;
-        els.resizer.addEventListener('mousedown', () => { isDragging = true; els.resizer.classList.add('dragging'); document.body.style.cursor = 'col-resize'; });
-        els.resizer.addEventListener('touchstart', () => { isDragging = true; els.resizer.classList.add('dragging'); }, {passive: true});
-        document.addEventListener('mousemove', (e) => { if (!isDragging) return; let newRatio = ((e.clientX - els.dashboardLayout.getBoundingClientRect().left) / els.dashboardLayout.getBoundingClientRect().width) * 100; splitRatio = Math.max(15, Math.min(newRatio, 85)); applySplitRatio(); });
-        document.addEventListener('touchmove', (e) => { if (!isDragging) return; let newRatio = ((e.touches[0].clientX - els.dashboardLayout.getBoundingClientRect().left) / els.dashboardLayout.getBoundingClientRect().width) * 100; splitRatio = Math.max(15, Math.min(newRatio, 85)); applySplitRatio(); }, {passive: true});
-        document.addEventListener('mouseup', () => { if (isDragging) { isDragging = false; els.resizer.classList.remove('dragging'); document.body.style.cursor = ''; localStorage.setItem('board_split_ratio_low', splitRatio); } });
-        document.addEventListener('touchend', () => { if (isDragging) { isDragging = false; els.resizer.classList.remove('dragging'); localStorage.setItem('board_split_ratio_low', splitRatio); } });
-        document.getElementById('toggle-writing-btn').addEventListener('click', () => { writingMode = writingMode === 'horizontal' ? 'vertical' : 'horizontal'; localStorage.setItem('board_writing_mode_low', writingMode); renderDashboardUI(); });
-        function applyDisplayMode() { document.body.classList.remove('mode-char-only', 'mode-bpmf-only'); if(modeClasses[displayMode]) document.body.classList.add(modeClasses[displayMode]); }
-        document.getElementById('toggle-display-btn').addEventListener('click', () => { displayMode = (displayMode + 1) % 3; localStorage.setItem('board_display_mode_low', displayMode.toString()); applyDisplayMode(); });
 
+        // --- 三欄展開／收合與動態拖曳寬度配置 ---
+        window.togglePanel = function(side) {
+            if (!panelState[side]) return;
+            const visibleCount = ['morning', 'left', 'right'].filter(k => panelState[k].visible).length;
+            // 若只剩最後一個區塊開啟，避免全部關閉造成畫面空白
+            if (panelState[side].visible && visibleCount <= 1) {
+                return;
+            }
+            panelState[side].visible = !panelState[side].visible;
+            savePanelState();
+            applyPanelLayout();
+        };
+
+        function applyPanelLayout() {
+            const mVis = panelState.morning.visible;
+            const lVis = panelState.left.visible;
+            const rVis = panelState.right.visible;
+
+            els.panelMorning.classList.toggle('is-collapsed', !mVis);
+            els.panelLeft.classList.toggle('is-collapsed', !lVis);
+            els.panelRight.classList.toggle('is-collapsed', !rVis);
+
+            els.panelMorning.style.flex = `${panelState.morning.weight} 1 0px`;
+            els.panelLeft.style.flex    = `${panelState.left.weight} 1 0px`;
+            els.panelRight.style.flex   = `${panelState.right.weight} 1 0px`;
+
+            // 控制頂部開關按鈕的視覺狀態
+            const btnM = document.getElementById('toggle-panel-morning');
+            const btnL = document.getElementById('toggle-panel-left');
+            const btnR = document.getElementById('toggle-panel-right');
+            if (btnM) { btnM.classList.toggle('active-morning', mVis); btnM.classList.toggle('collapsed', !mVis); }
+            if (btnL) { btnL.classList.toggle('active-left', lVis);    btnL.classList.toggle('collapsed', !lVis); }
+            if (btnR) { btnR.classList.toggle('active-right', rVis);   btnR.classList.toggle('collapsed', !rVis); }
+
+            // 決定兩根拖曳分隔桿是否顯示
+            // resizer-1 位於 morning 與 (left 或 right) 之間
+            const showR1 = mVis && (lVis || rVis);
+            // resizer-2 位於 left 與 right 之間
+            const showR2 = lVis && rVis;
+
+            els.resizer1.classList.toggle('is-hidden', !showR1);
+            els.resizer2.classList.toggle('is-hidden', !showR2);
+        }
+
+        function initResizers() {
+            let activeResizer = null;
+            let startX = 0;
+            let leftKey = null;
+            let rightKey = null;
+            let startLeftWidth = 0;
+            let startRightWidth = 0;
+            let combinedWeight = 0;
+
+            const startDrag = (resizerNum, clientX) => {
+                if (resizerNum === 1) {
+                    leftKey = 'morning';
+                    rightKey = panelState.left.visible ? 'left' : 'right';
+                    els.resizer1.classList.add('dragging');
+                } else {
+                    leftKey = 'left';
+                    rightKey = 'right';
+                    els.resizer2.classList.add('dragging');
+                }
+                const leftEl = document.getElementById('panel-' + leftKey);
+                const rightEl = document.getElementById('panel-' + rightKey);
+                if (!leftEl || !rightEl) return;
+
+                activeResizer = resizerNum;
+                startX = clientX;
+                startLeftWidth = leftEl.getBoundingClientRect().width;
+                startRightWidth = rightEl.getBoundingClientRect().width;
+                combinedWeight = panelState[leftKey].weight + panelState[rightKey].weight;
+                document.body.style.cursor = 'col-resize';
+            };
+
+            const doDrag = (clientX) => {
+                if (!activeResizer || !leftKey || !rightKey) return;
+                const totalPx = startLeftWidth + startRightWidth;
+                if (totalPx <= 0) return;
+
+                const deltaX = clientX - startX;
+                const minPx = 160;
+                const newLeftPx = Math.max(minPx, Math.min(totalPx - minPx, startLeftWidth + deltaX));
+                const leftRatio = newLeftPx / totalPx;
+
+                panelState[leftKey].weight = Math.round(combinedWeight * leftRatio * 10) / 10;
+                panelState[rightKey].weight = Math.round((combinedWeight - panelState[leftKey].weight) * 10) / 10;
+
+                applyPanelLayout();
+            };
+
+            const stopDrag = () => {
+                if (activeResizer) {
+                    activeResizer = null;
+                    els.resizer1.classList.remove('dragging');
+                    els.resizer2.classList.remove('dragging');
+                    document.body.style.cursor = '';
+                    savePanelState();
+                }
+            };
+
+            els.resizer1.addEventListener('mousedown', (e) => startDrag(1, e.clientX));
+            els.resizer2.addEventListener('mousedown', (e) => startDrag(2, e.clientX));
+            els.resizer1.addEventListener('touchstart', (e) => startDrag(1, e.touches[0].clientX), {passive: true});
+            els.resizer2.addEventListener('touchstart', (e) => startDrag(2, e.touches[0].clientX), {passive: true});
+
+            document.addEventListener('mousemove', (e) => doDrag(e.clientX));
+            document.addEventListener('touchmove', (e) => { if (activeResizer) doDrag(e.touches[0].clientX); }, {passive: true});
+            document.addEventListener('mouseup', stopDrag);
+            document.addEventListener('touchend', stopDrag);
+        }
+
+        function applyDisplayMode() {
+            if (els.toggleDisplayBtn) {
+                els.toggleDisplayBtn.textContent = `👁️ ${modeNames[displayMode]}`;
+            }
+        }
+
+        /* 點擊上方整體顯示模式時，一鍵切換全體狀態並將三區所有單格對齊至該模式 */
+        document.getElementById('toggle-display-btn').addEventListener('click', () => {
+            displayMode = (displayMode + 1) % 3;
+            localStorage.setItem('board_display_mode_low', displayMode.toString());
+            ['morningList', 'leftList', 'rightList'].forEach(listKey => {
+                if (currentData[listKey]) {
+                    currentData[listKey].forEach(item => {
+                        (item.rubyData || []).forEach(rObj => {
+                            delete rObj.cellMode;
+                        });
+                    });
+                }
+            });
+            applyDisplayMode();
+            saveData();
+        });
+
+        /* 進階注音編輯器（支援修改破音字注音與單字預設顯示模式） */
         window.openBpmfEditor = function(side, idx) {
             editingSide = side; editingIndex = idx;
-            const item = side === 'left' ? currentData.leftList[idx] : currentData.rightList[idx];
-            document.getElementById('ruby-grid').innerHTML = '';
+            const list = getListBySide(side);
+            const item = list[idx];
+            const grid = document.getElementById('ruby-grid');
+            grid.innerHTML = '';
             item.rubyData.forEach((rObj, i) => {
                 if (rObj.type !== 'char') return; 
-                const card = document.createElement('div'); card.className = 'ruby-edit-card';
-                card.innerHTML = `<div class="ruby-edit-char">${rObj.char}</div><input type="text" class="ruby-edit-input" id="edit-bpmf-${i}" value="${rObj.bpmf}" placeholder="空白">`;
-                document.getElementById('ruby-grid').appendChild(card);
+                const currentCellMode = (rObj.cellMode !== undefined && rObj.cellMode !== null) ? rObj.cellMode.toString() : 'auto';
+                const card = document.createElement('div');
+                card.className = 'ruby-edit-card';
+                card.innerHTML = `
+                    <div class="ruby-edit-char">${rObj.char}</div>
+                    <input type="text" class="ruby-edit-input" id="edit-bpmf-${i}" value="${rObj.bpmf}" placeholder="空白">
+                    ${!rObj.isBopomofoOnly ? `
+                    <select class="ruby-mode-select" id="edit-mode-${i}">
+                        <option value="auto" ${currentCellMode === 'auto' ? 'selected' : ''}>跟隨全體模式</option>
+                        <option value="0" ${currentCellMode === '0' ? 'selected' : ''}>國字＋注音</option>
+                        <option value="1" ${currentCellMode === '1' ? 'selected' : ''}>純國字</option>
+                        <option value="2" ${currentCellMode === '2' ? 'selected' : ''}>純注音</option>
+                    </select>` : ''}
+                `;
+                grid.appendChild(card);
             });
             document.getElementById('bpmf-modal').style.display = 'flex';
         }
         window.closeBpmfModal = function() { document.getElementById('bpmf-modal').style.display = 'none'; }
         window.saveBpmfModal = function() {
-            const item = editingSide === 'left' ? currentData.leftList[editingIndex] : currentData.rightList[editingIndex];
-            item.rubyData.forEach((rObj, i) => { const input = document.getElementById(`edit-bpmf-${i}`); if (input) rObj.bpmf = input.value.trim(); });
+            const list = getListBySide(editingSide);
+            const item = list[editingIndex];
+            item.rubyData.forEach((rObj, i) => {
+                const input = document.getElementById(`edit-bpmf-${i}`);
+                if (input) rObj.bpmf = input.value.trim();
+                const modeSelect = document.getElementById(`edit-mode-${i}`);
+                if (modeSelect) {
+                    if (modeSelect.value === 'auto') delete rObj.cellMode;
+                    else rObj.cellMode = parseInt(modeSelect.value);
+                }
+            });
             closeBpmfModal(); saveData(); renderDashboardUI();
         }
     </script>
