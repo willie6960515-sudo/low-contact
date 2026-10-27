@@ -293,6 +293,29 @@
             background: rgba(231, 76, 60, 0.7);
             color: #fff;
         }
+        .panel-row-control {
+            display: inline-flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.28);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            padding: 2px 4px;
+            gap: 4px;
+            margin-right: 2px;
+        }
+        .panel-row-control span {
+            font-size: 0.88rem;
+            font-weight: 800;
+            color: var(--chalk-yellow);
+            padding: 0 4px;
+            white-space: nowrap;
+        }
+        .panel-row-control button {
+            padding: 2px 7px !important;
+            font-size: 0.82rem !important;
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+        }
 
         /* =========================================================
            👑 教育部標準直式注音與聲調鎖定引擎 (共用核心) 👑
@@ -696,9 +719,19 @@
                     </div>
                     <div style="display:flex; gap:15px; flex-wrap:wrap; margin-top: 15px; align-items:flex-end;">
                         <div style="flex:1; min-width: 140px;">
-                            <label>📐 直行方格數量</label>
-                            <input type="number" id="setting-grid-rows" value="5" min="3" max="12">
+                            <label>☀️ 晨間任務直行格數</label>
+                            <input type="number" id="setting-grid-rows-morning" value="6" min="3" max="15">
                         </div>
+                        <div style="flex:1; min-width: 140px;">
+                            <label>📢 提醒事項直行格數</label>
+                            <input type="number" id="setting-grid-rows-left" value="6" min="3" max="15">
+                        </div>
+                        <div style="flex:1; min-width: 140px;">
+                            <label>📌 聯絡簿直行格數</label>
+                            <input type="number" id="setting-grid-rows-right" value="5" min="3" max="15">
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:15px; flex-wrap:wrap; margin-top: 15px; align-items:flex-end;">
                         <div style="flex:1; min-width: 180px;">
                             <label>🗓️ 學期起始日（統計起點）</label>
                             <input type="date" id="setting-semester-start">
@@ -881,12 +914,6 @@
                 <button id="toggle-panel-morning" class="ctrl-btn panel-toggle-btn active-morning" onclick="togglePanel('morning')" title="點擊切換顯示或收合「晨間任務」">☀️ 晨間任務</button>
                 <button id="toggle-panel-left" class="ctrl-btn panel-toggle-btn active-left" onclick="togglePanel('left')" title="點擊切換顯示或收合「提醒事項」">📢 提醒事項</button>
                 <button id="toggle-panel-right" class="ctrl-btn panel-toggle-btn active-right" onclick="togglePanel('right')" title="點擊切換顯示或收合「今日聯絡簿」">📌 今日聯絡簿</button>
-                
-                <div class="row-count-control" title="調整每一直行的方格數量">
-                    <button onclick="adjustGridRows(-1)" title="減少一格">➖</button>
-                    <span id="grid-rows-label">直行 5 格</span>
-                    <button onclick="adjustGridRows(1)" title="增加一格">➕</button>
-                </div>
 
                 <button id="toggle-display-btn" class="ctrl-btn" title="一鍵切換全體顯示模式">👁️ 國字＋注音</button>
                 <button id="discrete-setup-btn" class="ctrl-btn" title="返回後台設定畫面">⚙ 設定</button>
@@ -908,6 +935,11 @@
                         <div class="panel-header">☀️ 晨間任務</div>
                     </div>
                     <div class="font-adjust-btns">
+                        <div class="panel-row-control" title="調整晨間任務每一直行的方格數">
+                            <button onclick="adjustGridRows('morning', -1)" title="減少一格">➖</button>
+                            <span id="grid-rows-label-morning">6格</span>
+                            <button onclick="adjustGridRows('morning', 1)" title="增加一格">➕</button>
+                        </div>
                         <button onclick="adjustFont('morning', 0.1)" title="放大晨間任務方格">放大</button>
                         <button onclick="adjustFont('morning', -0.1)" title="縮小晨間任務方格">縮小</button>
                         <button class="btn-collapse-panel" onclick="togglePanel('morning')" title="收合晨間任務">收合</button>
@@ -926,6 +958,11 @@
                         <div class="panel-header">📢 提醒事項</div>
                     </div>
                     <div class="font-adjust-btns">
+                        <div class="panel-row-control" title="調整提醒事項每一直行的方格數">
+                            <button onclick="adjustGridRows('left', -1)" title="減少一格">➖</button>
+                            <span id="grid-rows-label-left">6格</span>
+                            <button onclick="adjustGridRows('left', 1)" title="增加一格">➕</button>
+                        </div>
                         <button onclick="adjustFont('left', 0.1)" title="放大提醒事項方格">放大</button>
                         <button onclick="adjustFont('left', -0.1)" title="縮小提醒事項方格">縮小</button>
                         <button class="btn-collapse-panel" onclick="togglePanel('left')" title="收合提醒事項">收合</button>
@@ -944,6 +981,11 @@
                         <div class="panel-header">📌 今日聯絡簿</div>
                     </div>
                     <div class="font-adjust-btns">
+                        <div class="panel-row-control" title="調整今日聯絡簿每一直行的方格數">
+                            <button onclick="adjustGridRows('right', -1)" title="減少一格">➖</button>
+                            <span id="grid-rows-label-right">5格</span>
+                            <button onclick="adjustGridRows('right', 1)" title="增加一格">➕</button>
+                        </div>
                         <button onclick="adjustFont('right', 0.1)" title="放大聯絡簿方格">放大</button>
                         <button onclick="adjustFont('right', -0.1)" title="縮小聯絡簿方格">縮小</button>
                         <button class="btn-collapse-panel" onclick="togglePanel('right')" title="收合今日聯絡簿">收合</button>
@@ -1122,7 +1164,10 @@
             excludedSeats: [],
             lateTime: "07:50",
             semesterStartDate: "",
-            gridRows: 5
+            gridRows: 5,
+            gridRowsMorning: 6,
+            gridRowsLeft: 6,
+            gridRowsRight: 5
         };
 
         let tempLeaves = {};
@@ -1178,7 +1223,9 @@
             attendanceBar: document.getElementById('attendance-bar'),
             promptModal: document.getElementById('custom-prompt-modal'),
             promptInput: document.getElementById('prompt-input'),
-            gridRowsLabel: document.getElementById('grid-rows-label'),
+            gridRowsLabelMorning: document.getElementById('grid-rows-label-morning'),
+            gridRowsLabelLeft: document.getElementById('grid-rows-label-left'),
+            gridRowsLabelRight: document.getElementById('grid-rows-label-right'),
             toggleDisplayBtn: document.getElementById('toggle-display-btn')
         };
 
@@ -1233,6 +1280,9 @@
             if (!globalSettings.gridRows || globalSettings.gridRows < 3) {
                 globalSettings.gridRows = 5;
             }
+            if (!globalSettings.gridRowsMorning) globalSettings.gridRowsMorning = globalSettings.gridRows || 6;
+            if (!globalSettings.gridRowsLeft) globalSettings.gridRowsLeft = globalSettings.gridRows || 6;
+            if (!globalSettings.gridRowsRight) globalSettings.gridRowsRight = globalSettings.gridRows || 5;
 
             if (typeof firebase !== 'undefined') {
                 try {
@@ -1262,6 +1312,9 @@
                 if(doc.exists) {
                     globalSettings = {...globalSettings, ...doc.data()};
                     if (!globalSettings.gridRows) globalSettings.gridRows = 5;
+                    if (!globalSettings.gridRowsMorning) globalSettings.gridRowsMorning = globalSettings.gridRows || 6;
+                    if (!globalSettings.gridRowsLeft) globalSettings.gridRowsLeft = globalSettings.gridRows || 6;
+                    if (!globalSettings.gridRowsRight) globalSettings.gridRowsRight = globalSettings.gridRows || 5;
                 }
                 renderGlobalSettingsUI();
                 loadDataForDate(currentDateStr);
@@ -1270,14 +1323,20 @@
 
         function handleLogoutSuccess() {
             isCloud = false;
-            if(unsubscribe) unsubscribe();
+            if (unsubscribe) unsubscribe();
             els.cloudStatus.textContent = "單機模式";
             els.cloudStatus.style.color = '#555';
             els.cloudDot.classList.remove('online');
-            els.btnLogin.style.display = 'block';
+            els.btnLogin.style.display = 'flex';
             els.btnLogout.style.display = 'none';
             renderGlobalSettingsUI();
             loadDataForDate(currentDateStr);
+        }
+
+        function getGridRowsBySide(side) {
+            if (side === 'morning') return Math.max(3, Math.min(15, parseInt(globalSettings.gridRowsMorning) || 6));
+            if (side === 'left') return Math.max(3, Math.min(15, parseInt(globalSettings.gridRowsLeft) || 6));
+            return Math.max(3, Math.min(15, parseInt(globalSettings.gridRowsRight) || 5));
         }
 
         function renderGlobalSettingsUI() {
@@ -1285,8 +1344,12 @@
             document.getElementById('setting-excluded-seats').value = globalSettings.excludedSeats.join(', ');
             document.getElementById('setting-late-time').value = globalSettings.lateTime;
             document.getElementById('setting-semester-start').value = globalSettings.semesterStartDate;
-            document.getElementById('setting-grid-rows').value = globalSettings.gridRows || 5;
-            if (els.gridRowsLabel) els.gridRowsLabel.textContent = `直行 ${globalSettings.gridRows || 5} 格`;
+            document.getElementById('setting-grid-rows-morning').value = getGridRowsBySide('morning');
+            document.getElementById('setting-grid-rows-left').value = getGridRowsBySide('left');
+            document.getElementById('setting-grid-rows-right').value = getGridRowsBySide('right');
+            if (els.gridRowsLabelMorning) els.gridRowsLabelMorning.textContent = `${getGridRowsBySide('morning')}格`;
+            if (els.gridRowsLabelLeft) els.gridRowsLabelLeft.textContent = `${getGridRowsBySide('left')}格`;
+            if (els.gridRowsLabelRight) els.gridRowsLabelRight.textContent = `${getGridRowsBySide('right')}格`;
         }
 
         window.saveGlobalSettings = function() {
@@ -1295,7 +1358,10 @@
             globalSettings.excludedSeats = exclStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
             globalSettings.lateTime = document.getElementById('setting-late-time').value || "07:50";
             globalSettings.semesterStartDate = document.getElementById('setting-semester-start').value;
-            globalSettings.gridRows = Math.max(3, Math.min(12, parseInt(document.getElementById('setting-grid-rows').value) || 5));
+            globalSettings.gridRowsMorning = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-morning').value) || 6));
+            globalSettings.gridRowsLeft = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-left').value) || 6));
+            globalSettings.gridRowsRight = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-right').value) || 5));
+            globalSettings.gridRows = globalSettings.gridRowsRight;
 
             localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify(globalSettings));
             renderGlobalSettingsUI();
@@ -1309,12 +1375,23 @@
             renderDashboardUI(); 
         }
 
-        /* 在黑板上方直接調整直行格數 */
-        window.adjustGridRows = function(delta) {
-            const currentRows = globalSettings.gridRows || 5;
-            const nextRows = Math.max(3, Math.min(12, currentRows + delta));
+        /* 在各欄右上角直接調整該欄的直行格數 */
+        window.adjustGridRows = function(side, delta) {
+            const propMap = {
+                morning: 'gridRowsMorning',
+                left: 'gridRowsLeft',
+                right: 'gridRowsRight'
+            };
+            const prop = propMap[side];
+            if (!prop) return;
+
+            const currentRows = getGridRowsBySide(side);
+            const nextRows = Math.max(3, Math.min(15, currentRows + delta));
             if (nextRows === currentRows) return;
-            globalSettings.gridRows = nextRows;
+
+            globalSettings[prop] = nextRows;
+            if (side === 'right') globalSettings.gridRows = nextRows;
+
             localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify(globalSettings));
             if (isCloud && user) {
                 db.collection('users').doc(user.uid).collection('settings_low').doc('global').set(globalSettings);
@@ -1615,7 +1692,9 @@
             els.dateDisplay.textContent = formatChineseDate(currentDateStr);
             els.dayDisplay.textContent = days[dateObj.getDay()];
             document.getElementById('display-duty').textContent = currentData.dutyText || "無";
-            if (els.gridRowsLabel) els.gridRowsLabel.textContent = `直行 ${globalSettings.gridRows || 5} 格`;
+            if (els.gridRowsLabelMorning) els.gridRowsLabelMorning.textContent = `${getGridRowsBySide('morning')}格`;
+            if (els.gridRowsLabelLeft) els.gridRowsLabelLeft.textContent = `${getGridRowsBySide('left')}格`;
+            if (els.gridRowsLabelRight) els.gridRowsLabelRight.textContent = `${getGridRowsBySide('right')}格`;
             
             renderAttendanceBar(); 
             
@@ -1628,7 +1707,7 @@
         /* 👑 共用直式方格渲染引擎（由右至左、一字一格、奇偶底色交錯、滿格自動同色折行） 👑 */
         function renderVerticalGrid(container, list, side, themeClass, emptyMsg, minEmptyCols) {
             container.innerHTML = '';
-            const rowsPerCol = Math.max(3, Math.min(12, parseInt(globalSettings.gridRows) || 5));
+            const rowsPerCol = getGridRowsBySide(side);
 
             if (!list || list.length === 0) {
                 container.innerHTML = `<div style="opacity:0.55; font-size:1.5rem; margin:auto; font-weight:bold;">${emptyMsg}</div>`;
