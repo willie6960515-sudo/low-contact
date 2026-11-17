@@ -148,6 +148,24 @@
             background: rgba(241, 196, 15, 0.14);
             border-color: rgba(241, 196, 15, 0.4);
         }
+        .duty-options { margin: 12px 0; }
+        .duty-options label { display: inline-flex; gap: 6px; align-items: center; margin-right: 12px; min-height: 40px; }
+        #duty-dialog {
+            width: min(480px, calc(100% - 28px));
+            max-height: 88vh;
+            overflow: auto;
+            padding: 22px;
+            border: 1px solid #aac3b5;
+            border-radius: 12px;
+            color: #223b31;
+        }
+        #duty-dialog::backdrop { background: rgba(0,0,0,0.58); }
+        #duty-dialog h2 { margin-top: 0; }
+        #duty-dialog select { padding: 8px; font: inherit; }
+        #duty-dialog .seat-grid { margin: 8px 0; }
+        #duty-dialog .seat-btn[aria-pressed="true"] { background: #20664b; color: white; }
+        #duty-dialog .seat-btn:disabled { opacity: 0.5; cursor: default; }
+        #duty-error { color: #a02828; }
         .absentee-text {
             font-size: 1.2rem;
             color: #ff7675;
@@ -284,15 +302,6 @@
             transition: 0.2s;
         }
         .font-adjust-btns button:hover { background: rgba(255,255,255,0.3); transform: scale(1.04); }
-        .font-adjust-btns .btn-collapse-panel {
-            background: rgba(231, 76, 60, 0.25);
-            border-color: rgba(231, 76, 60, 0.5);
-            color: #ffcccc;
-        }
-        .font-adjust-btns .btn-collapse-panel:hover {
-            background: rgba(231, 76, 60, 0.7);
-            color: #fff;
-        }
         .panel-row-control {
             display: inline-flex;
             align-items: center;
@@ -765,7 +774,12 @@
                     </div>
                     <div style="flex:1; min-width: 250px;">
                         <label>🧹 值日生</label>
-                        <input type="text" id="duty-input" placeholder="例如：林小美">
+                        <div class="input-row">
+                            <strong id="setup-duty">無</strong>
+                            <button type="button" id="duty-prev" class="btn-secondary" onclick="moveDutyGroup(-1)" hidden>上一組</button>
+                            <button type="button" id="duty-next" class="btn-secondary" onclick="moveDutyGroup(1)" hidden>下一組</button>
+                            <button type="button" class="btn-secondary" onclick="openDutyDialog()">✎ 設定值日生</button>
+                        </div>
                     </div>
                 </div>
 
@@ -884,6 +898,42 @@
         </div>
     </div>
 
+    <dialog id="duty-dialog" aria-labelledby="duty-title">
+        <form id="duty-form">
+            <h2 id="duty-title">🧹 值日生設定</h2>
+            <p id="duty-date"></p>
+            <fieldset class="duty-options">
+                <legend>安排方式</legend>
+                <label><input type="radio" name="duty-mode" value="rotation" checked> 照座號輪值</label>
+                <label><input type="radio" name="duty-mode" value="fixed"> 指定座號</label>
+                <label><input type="radio" name="duty-mode" value="text"> 自訂文字</label>
+            </fieldset>
+            <div id="duty-rotation-options">
+                <p><label for="duty-count">每天</label>
+                    <select id="duty-count">
+                        <option value="1">1 位</option><option value="2">2 位</option>
+                        <option value="3" selected>3 位</option><option value="4">4 位</option>
+                    </select>
+                </p>
+                <p><label for="duty-start">當天從</label> <select id="duty-start"></select> 開始</p>
+                <p>週一到週五依序換組。請假的座號當天跳過，由後面的座號補上。</p>
+            </div>
+            <div id="duty-fixed-options" hidden>
+                <p>點選當天的值日生。請假的座號會由後面的座號補上。</p>
+                <div id="duty-seats" class="seat-grid"></div>
+            </div>
+            <div id="duty-text-options" hidden>
+                <label for="duty-input">當天顯示文字</label>
+                <input type="text" id="duty-input" placeholder="留空可清除自訂文字">
+            </div>
+            <p id="duty-error" role="alert" hidden></p>
+            <div class="modal-actions">
+                <button type="button" id="duty-cancel" class="btn-secondary">取消</button>
+                <button type="submit" id="duty-save" class="btn-primary">儲存</button>
+            </div>
+        </form>
+    </dialog>
+
     <!-- 黑板主畫面 -->
     <div id="dashboard-screen" class="app-screen">
         
@@ -902,7 +952,7 @@
                 <!-- 極簡化值日生標籤 -->
                 <div class="top-badge duty-badge" title="今日值日生">
                     <span>🧹 值日生：</span>
-                    <span id="display-duty">無</span>
+                    <span id="display-duty" aria-live="polite">無</span>
                 </div>
 
                 <!-- 出缺席狀態摘要 -->
@@ -942,7 +992,6 @@
                         </div>
                         <button onclick="adjustFont('morning', 0.1)" title="放大晨間任務方格">放大</button>
                         <button onclick="adjustFont('morning', -0.1)" title="縮小晨間任務方格">縮小</button>
-                        <button class="btn-collapse-panel" onclick="togglePanel('morning')" title="收合晨間任務">收合</button>
                     </div>
                 </div>
                 <div class="contact-grid-wrapper" id="display-morning-list"></div>
@@ -965,7 +1014,6 @@
                         </div>
                         <button onclick="adjustFont('left', 0.1)" title="放大提醒事項方格">放大</button>
                         <button onclick="adjustFont('left', -0.1)" title="縮小提醒事項方格">縮小</button>
-                        <button class="btn-collapse-panel" onclick="togglePanel('left')" title="收合提醒事項">收合</button>
                     </div>
                 </div>
                 <div class="contact-grid-wrapper" id="display-left-list"></div>
@@ -988,7 +1036,6 @@
                         </div>
                         <button onclick="adjustFont('right', 0.1)" title="放大聯絡簿方格">放大</button>
                         <button onclick="adjustFont('right', -0.1)" title="縮小聯絡簿方格">縮小</button>
-                        <button class="btn-collapse-panel" onclick="togglePanel('right')" title="收合今日聯絡簿">收合</button>
                     </div>
                 </div>
                 <div class="contact-grid-wrapper" id="display-right-list"></div>
@@ -1156,7 +1203,7 @@
 
         // --- 狀態變數 ---
         let currentDateStr = "";
-        let currentData = { morningList: [], leftList: [], rightList: [], absentText: "", dutyText: "", leaves: {}, checkins: {} };
+        let currentData = { morningList: [], leftList: [], rightList: [], absentText: "", dutyText: "", dutyOverride: null, leaves: {}, checkins: {} };
         let allLocalData = {}; 
         
         let globalSettings = {
@@ -1167,9 +1214,11 @@
             gridRows: 5,
             gridRowsMorning: 6,
             gridRowsLeft: 6,
-            gridRowsRight: 5
+            gridRowsRight: 5,
+            dutySchedules: []
         };
 
+        let localDutySchedules = [];
         let tempLeaves = {};
         
         let db = null;
@@ -1274,6 +1323,7 @@
             
             const localSettings = localStorage.getItem(GLOBAL_SETTING_KEY);
             if(localSettings) globalSettings = {...globalSettings, ...JSON.parse(localSettings)};
+            localDutySchedules = globalSettings.dutySchedules;
             if (!globalSettings.semesterStartDate) {
                 globalSettings.semesterStartDate = currentDateStr;
             }
@@ -1316,6 +1366,7 @@
                     if (!globalSettings.gridRowsLeft) globalSettings.gridRowsLeft = globalSettings.gridRows || 6;
                     if (!globalSettings.gridRowsRight) globalSettings.gridRowsRight = globalSettings.gridRows || 5;
                 }
+                globalSettings.dutySchedules = doc.exists ? doc.data().dutySchedules || [] : [];
                 renderGlobalSettingsUI();
                 loadDataForDate(currentDateStr);
             });
@@ -1323,6 +1374,7 @@
 
         function handleLogoutSuccess() {
             isCloud = false;
+            globalSettings.dutySchedules = localDutySchedules;
             if (unsubscribe) unsubscribe();
             els.cloudStatus.textContent = "單機模式";
             els.cloudStatus.style.color = '#555';
@@ -1363,7 +1415,7 @@
             globalSettings.gridRowsRight = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-right').value) || 5));
             globalSettings.gridRows = globalSettings.gridRowsRight;
 
-            localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify(globalSettings));
+            localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify({ ...globalSettings, dutySchedules: localDutySchedules }));
             renderGlobalSettingsUI();
             
             if(isCloud && user) {
@@ -1392,7 +1444,7 @@
             globalSettings[prop] = nextRows;
             if (side === 'right') globalSettings.gridRows = nextRows;
 
-            localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify(globalSettings));
+            localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify({ ...globalSettings, dutySchedules: localDutySchedules }));
             if (isCloud && user) {
                 db.collection('users').doc(user.uid).collection('settings_low').doc('global').set(globalSettings);
             }
@@ -1403,13 +1455,14 @@
         function loadDataForDate(date) {
             currentDateStr = date;
             els.setupDatePicker.value = date;
-            currentData = { morningList: [], leftList: [], rightList: [], absentText: "", dutyText: "", leaves: {}, checkins: {} };
+            currentData = { morningList: [], leftList: [], rightList: [], absentText: "", dutyText: "", dutyOverride: null, leaves: {}, checkins: {} };
 
             const processData = (data) => {
                 currentData.morningList = upgradeDataStructure(data.morningList);
                 currentData.leftList = upgradeDataStructure(data.leftList);
                 currentData.rightList = upgradeDataStructure(data.rightList);
                 currentData.dutyText = data.dutyText || "";
+                currentData.dutyOverride = data.dutyOverride || null;
                 currentData.absentText = data.absentText || "";
                 currentData.leaves = data.leaves || {};
                 currentData.checkins = data.checkins || {};
@@ -1637,7 +1690,6 @@
         window.closeStatsModal = function() { document.getElementById('stats-modal').style.display = 'none'; }
 
         function renderSetupUI() {
-            document.getElementById('duty-input').value = currentData.dutyText || "";
             
             let leavesArr = Object.keys(currentData.leaves || {}).map(k => `${k}號(${currentData.leaves[k]})`);
             if (leavesArr.length > 0) {
@@ -1691,7 +1743,7 @@
             
             els.dateDisplay.textContent = formatChineseDate(currentDateStr);
             els.dayDisplay.textContent = days[dateObj.getDay()];
-            document.getElementById('display-duty').textContent = currentData.dutyText || "無";
+            renderDuty();
             if (els.gridRowsLabelMorning) els.gridRowsLabelMorning.textContent = `${getGridRowsBySide('morning')}格`;
             if (els.gridRowsLabelLeft) els.gridRowsLabelLeft.textContent = `${getGridRowsBySide('left')}格`;
             if (els.gridRowsLabelRight) els.gridRowsLabelRight.textContent = `${getGridRowsBySide('right')}格`;
@@ -1938,7 +1990,211 @@
             loadDataForDate((new Date(d - offset)).toISOString().slice(0, 10));
         }
         els.setupDatePicker.addEventListener('change', (e) => loadDataForDate(e.target.value));
-        document.getElementById('duty-input').addEventListener('change', () => { currentData.dutyText = document.getElementById('duty-input').value; saveData(); });
+        const dutyDialog = document.getElementById('duty-dialog');
+        const dutyForm = document.getElementById('duty-form');
+        const dutyStart = document.getElementById('duty-start');
+        const dutyCount = document.getElementById('duty-count');
+        let selectedDutySeats = [];
+        let dutySaving = false;
+
+        function getDutyRoster() {
+            return Array.from({ length: globalSettings.maxSeat }, (_, index) => index + 1)
+                .filter(seat => !globalSettings.excludedSeats.includes(seat));
+        }
+
+        function dutySeatIndex(roster, seat) {
+            const index = roster.findIndex(number => number >= seat);
+            return index < 0 ? 0 : index;
+        }
+
+        function getDutySchedule() {
+            return globalSettings.dutySchedules.findLast(schedule => schedule.startDate <= currentDateStr);
+        }
+
+        function getDutyStartIndex(roster) {
+            const schedule = getDutySchedule();
+            if (!schedule || !roster.length) return null;
+            if (currentData.dutyOverride?.mode === 'rotation') {
+                return dutySeatIndex(roster, currentData.dutyOverride.startSeat);
+            }
+            const date = new Date(currentDateStr + 'T00:00:00Z');
+            if ([0, 6].includes(date.getUTCDay())) return null;
+            const start = new Date(schedule.startDate + 'T00:00:00Z');
+            const elapsed = Math.round((date - start) / 86400000);
+            let schoolDays = Math.floor(elapsed / 7) * 5;
+            for (let day = 0; day < elapsed % 7; day++) {
+                const weekday = (start.getUTCDay() + day) % 7;
+                if (weekday > 0 && weekday < 6) schoolDays++;
+            }
+            return (dutySeatIndex(roster, schedule.startSeat) + schoolDays * schedule.count) % roster.length;
+        }
+
+        function getDutySeats(roster, startIndex, count, preferred = []) {
+            const seats = preferred.filter(seat => roster.includes(seat) && !currentData.leaves[seat]);
+            for (let offset = 0; offset < roster.length && seats.length < count; offset++) {
+                const seat = roster[(startIndex + offset) % roster.length];
+                if (!currentData.leaves[seat] && !seats.includes(seat)) seats.push(seat);
+            }
+            return seats;
+        }
+
+        function renderDuty() {
+            const roster = getDutyRoster();
+            const override = currentData.dutyOverride;
+            const startIndex = getDutyStartIndex(roster);
+            const canRotate = startIndex !== null && !currentData.dutyText && override?.mode !== 'fixed';
+            let label = currentData.dutyText || '無';
+            if (override?.mode === 'fixed' || canRotate) {
+                const preferred = override?.mode === 'fixed' ? override.seats : [];
+                const fillFrom = preferred.length
+                    ? dutySeatIndex(roster, preferred[preferred.length - 1] + 1)
+                    : startIndex;
+                const count = override?.mode === 'fixed' ? preferred.length : getDutySchedule().count;
+                const seats = getDutySeats(roster, fillFrom, count, preferred);
+                label = seats.length ? seats.join('、') + ' 號' : '無可排座號';
+            }
+            document.getElementById('display-duty').textContent = label;
+            document.getElementById('setup-duty').textContent = label;
+            document.getElementById('duty-prev').hidden = !canRotate;
+            document.getElementById('duty-next').hidden = !canRotate;
+        }
+
+        function renderDutyOptions(mode) {
+            document.getElementById('duty-rotation-options').hidden = mode !== 'rotation';
+            document.getElementById('duty-fixed-options').hidden = mode !== 'fixed';
+            document.getElementById('duty-text-options').hidden = mode !== 'text';
+            if (mode !== 'fixed') return;
+            const grid = document.getElementById('duty-seats');
+            grid.replaceChildren(...getDutyRoster().map(seat => {
+                const button = document.createElement('button');
+                const selected = selectedDutySeats.includes(seat);
+                button.type = 'button';
+                button.className = 'seat-btn';
+                button.textContent = currentData.leaves[seat] ? `${seat}（假）` : seat;
+                button.setAttribute('aria-pressed', selected);
+                button.disabled = !selected && selectedDutySeats.length >= 4;
+                button.addEventListener('click', () => {
+                    selectedDutySeats = selectedDutySeats.includes(seat)
+                        ? selectedDutySeats.filter(item => item !== seat)
+                        : [...selectedDutySeats, seat].sort((a, b) => a - b);
+                    renderDutyOptions('fixed');
+                    grid.children[getDutyRoster().indexOf(seat)]?.focus();
+                });
+                return button;
+            }));
+        }
+
+        window.openDutyDialog = function() {
+            if (dutySaving) return;
+            const roster = getDutyRoster();
+            const mode = currentData.dutyText ? 'text' : currentData.dutyOverride?.mode || 'rotation';
+            selectedDutySeats = (currentData.dutyOverride?.seats || []).filter(seat => roster.includes(seat));
+            dutyForm.elements['duty-mode'].value = mode;
+            dutyCount.value = getDutySchedule()?.count || 3;
+            dutyStart.replaceChildren(...roster.map(seat => new Option(seat + ' 號', seat)));
+            dutyStart.value = roster[getDutyStartIndex(roster) ?? 0] || '';
+            document.getElementById('duty-input').value = currentData.dutyText;
+            document.getElementById('duty-date').textContent = formatChineseDate(currentDateStr);
+            document.getElementById('duty-error').hidden = true;
+            renderDutyOptions(mode);
+            dutyDialog.showModal();
+        };
+
+        async function saveDuty(dayPatch, schedule) {
+            const date = currentDateStr;
+            const dayData = { ...currentData, ...dayPatch };
+            const dutySchedules = schedule && [...globalSettings.dutySchedules.filter(item => item.startDate !== date), schedule]
+                .sort((a, b) => a.startDate.localeCompare(b.startDate));
+            if (isCloud && user) {
+                const account = db.collection('users').doc(user.uid);
+                const batch = db.batch();
+                batch.set(account.collection('board_records_low').doc(date), dayPatch, { merge: true });
+                if (dutySchedules) {
+                    batch.set(account.collection('settings_low').doc('global'), { dutySchedules }, { merge: true });
+                }
+                await batch.commit();
+            } else {
+                const records = { ...allLocalData, [date]: dayData };
+                localStorage.setItem(LOCAL_KEY, JSON.stringify(records));
+                allLocalData = records;
+                if (dutySchedules) {
+                    localStorage.setItem(GLOBAL_SETTING_KEY, JSON.stringify({ ...globalSettings, dutySchedules }));
+                    localDutySchedules = dutySchedules;
+                }
+            }
+            if (dutySchedules) globalSettings.dutySchedules = dutySchedules;
+            if (date === currentDateStr) Object.assign(currentData, dayPatch);
+            renderDuty();
+            showSaving();
+        }
+
+        window.moveDutyGroup = async function(direction) {
+            if (dutySaving) return;
+            const roster = getDutyRoster();
+            const index = getDutyStartIndex(roster);
+            if (index === null || currentData.dutyText || currentData.dutyOverride?.mode === 'fixed') return;
+            const count = getDutySchedule().count;
+            const next = (index + direction * count % roster.length + roster.length) % roster.length;
+            dutySaving = true;
+            try {
+                await saveDuty({ dutyOverride: { mode: 'rotation', startSeat: roster[next] } });
+            } catch (error) {
+                console.error(error);
+                alert('值日生儲存失敗，請再試一次。');
+            } finally {
+                dutySaving = false;
+            }
+        };
+
+        dutyForm.querySelectorAll('[name="duty-mode"]').forEach(radio => {
+            radio.addEventListener('change', () => renderDutyOptions(radio.value));
+        });
+        document.getElementById('duty-cancel').addEventListener('click', () => dutyDialog.close());
+        dutyDialog.addEventListener('cancel', event => {
+            if (dutySaving) event.preventDefault();
+        });
+        dutyForm.addEventListener('submit', async event => {
+            event.preventDefault();
+            if (dutySaving) return;
+            const error = document.getElementById('duty-error');
+            const save = document.getElementById('duty-save');
+            const cancel = document.getElementById('duty-cancel');
+            const mode = dutyForm.elements['duty-mode'].value;
+            const dayPatch = { dutyText: '', dutyOverride: null };
+            let schedule;
+            error.hidden = true;
+            if (mode === 'rotation') {
+                if (!dutyStart.value) {
+                    error.textContent = '目前沒有可用座號，請先確認班級座號設定。';
+                    error.hidden = false;
+                    return;
+                }
+                schedule = { startDate: currentDateStr, startSeat: Number(dutyStart.value), count: Number(dutyCount.value) };
+                if ([0, 6].includes(new Date(currentDateStr + 'T00:00:00Z').getUTCDay())) {
+                    dayPatch.dutyOverride = { mode: 'rotation', startSeat: schedule.startSeat };
+                }
+            } else if (mode === 'fixed') {
+                if (!selectedDutySeats.length) {
+                    error.textContent = '請點選至少一個座號。';
+                    error.hidden = false;
+                    return;
+                }
+                dayPatch.dutyOverride = { mode: 'fixed', seats: selectedDutySeats };
+            } else {
+                dayPatch.dutyText = document.getElementById('duty-input').value.trim();
+            }
+            dutySaving = save.disabled = cancel.disabled = true;
+            try {
+                await saveDuty(dayPatch, schedule);
+                dutyDialog.close();
+            } catch (failure) {
+                console.error(failure);
+                error.textContent = '值日生儲存失敗，請再試一次。';
+                error.hidden = false;
+            } finally {
+                dutySaving = save.disabled = cancel.disabled = false;
+            }
+        });
 
         window.doLogin = function() { auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(e => console.error(e.message)); }
         window.doLogout = function() { auth.signOut(); }
