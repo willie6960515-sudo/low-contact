@@ -511,7 +511,7 @@
             color: var(--chalk-yellow);
         }
 
-        /* --- 主題三：📌 今日聯絡簿（白底與灰底實線方格，代表紙本聯絡簿要抄） --- */
+        /* --- 主題三：📌 聯絡簿（白底與灰底實線方格，代表紙本聯絡簿要抄） --- */
         .board-theme-right {
             border: 3px solid #7f8c8d;
             background-color: #ffffff;
@@ -564,7 +564,7 @@
         .cell-bpmf-only .bopo-box.len-2 { font-size: calc(var(--cell-size) * 0.36); }
         .cell-bpmf-only .bopo-box.len-3 { font-size: calc(var(--cell-size) * 0.28); }
 
-        /* 3. 國字＋注音模式 */
+        /* 3. 字注音模式 */
         .cell-both {
             display: flex;
             flex-direction: row;
@@ -749,6 +749,11 @@
                             <button class="btn-primary" style="background:#f39c12; width:100%; border:none; padding:12px;" onclick="openStatsModal()">📊 檢視學期統計</button>
                         </div>
                     </div>
+                    <div style="margin-top:20px;">
+                        <label for="setting-learned-chars">📖 孩子已學過的國字</label>
+                        <textarea id="setting-learned-chars" rows="4" placeholder="例如：一二三大小山水日月" aria-describedby="learned-chars-help" style="resize:vertical;"></textarea>
+                        <p id="learned-chars-help" style="margin:8px 0; line-height:1.6; color:#555;">可直接貼上各課生字，空格、標點和重複的字會自動整理。儲存後，在黑板上方切換至「已學字」即可套用到三個區塊。</p>
+                    </div>
                     <div style="text-align:right; margin-top:15px;">
                         <button class="btn-primary" style="background:#16a085; border:none;" onclick="saveGlobalSettings()">💾 儲存全域設定</button>
                     </div>
@@ -805,9 +810,9 @@
                     <div id="left-setup-list" class="setup-list"></div>
                 </div>
 
-                <!-- 3. 今日聯絡簿設定 -->
+                <!-- 3. 聯絡簿設定 -->
                 <div class="control-group">
-                    <label style="border-left-color: #2980b9;">📌 今日聯絡簿（右側・白灰紙本方格）</label>
+                    <label style="border-left-color: #2980b9;">📌 聯絡簿（右側・白灰紙本方格）</label>
                     <div class="input-row">
                         <input type="text" id="right-input" placeholder="例如：國習第十二、十三頁" onkeypress="handleEnter(event, 'right')">
                         <button onclick="addItem('right')" class="btn-primary">新增</button>
@@ -963,9 +968,9 @@
             <div class="global-controls-wrapper">
                 <button id="toggle-panel-morning" class="ctrl-btn panel-toggle-btn active-morning" onclick="togglePanel('morning')" title="點擊切換顯示或收合「晨間任務」">☀️ 晨間任務</button>
                 <button id="toggle-panel-left" class="ctrl-btn panel-toggle-btn active-left" onclick="togglePanel('left')" title="點擊切換顯示或收合「提醒事項」">📢 提醒事項</button>
-                <button id="toggle-panel-right" class="ctrl-btn panel-toggle-btn active-right" onclick="togglePanel('right')" title="點擊切換顯示或收合「今日聯絡簿」">📌 今日聯絡簿</button>
+                <button id="toggle-panel-right" class="ctrl-btn panel-toggle-btn active-right" onclick="togglePanel('right')" title="點擊切換顯示或收合「聯絡簿」">📌 聯絡簿</button>
 
-                <button id="toggle-display-btn" class="ctrl-btn" title="一鍵切換全體顯示模式">👁️ 國字＋注音</button>
+                <button id="toggle-display-btn" class="ctrl-btn" title="一鍵切換全體顯示模式">👁️ 字注音</button>
                 <button id="discrete-setup-btn" class="ctrl-btn" title="返回後台設定畫面">⚙ 設定</button>
             </div>
 
@@ -1022,14 +1027,14 @@
             <!-- 分隔拖曳桿 2 -->
             <div class="resizer" id="resizer-2" title="左右拖曳調整寬度"><div class="resizer-line"></div></div>
 
-            <!-- 右欄：📌 今日聯絡簿 -->
+            <!-- 右欄：📌 聯絡簿 -->
             <div class="chalk-panel panel-right" id="panel-right">
                 <div class="panel-header-container">
                     <div class="panel-title-group">
-                        <div class="panel-header">📌 今日聯絡簿</div>
+                        <div class="panel-header">📌 聯絡簿</div>
                     </div>
                     <div class="font-adjust-btns">
-                        <div class="panel-row-control" title="調整今日聯絡簿每一直行的方格數">
+                        <div class="panel-row-control" title="調整聯絡簿每一直行的方格數">
                             <button onclick="adjustGridRows('right', -1)" title="減少一格">➖</button>
                             <span id="grid-rows-label-right">5格</span>
                             <button onclick="adjustGridRows('right', 1)" title="增加一格">➕</button>
@@ -1215,7 +1220,8 @@
             gridRowsMorning: 6,
             gridRowsLeft: 6,
             gridRowsRight: 5,
-            dutySchedules: []
+            dutySchedules: [],
+            learnedChars: ''
         };
 
         let localDutySchedules = [];
@@ -1239,7 +1245,7 @@
         };
 
         let displayMode = parseInt(localStorage.getItem('board_display_mode_low') || '0');
-        const modeNames = ['國字＋注音', '純國字', '純注音'];
+        const modeNames = ['字注音', '純國字', '純注音', '已學字'];
 
         let editingSide = null;
         let editingIndex = null;
@@ -1396,6 +1402,7 @@
             document.getElementById('setting-excluded-seats').value = globalSettings.excludedSeats.join(', ');
             document.getElementById('setting-late-time').value = globalSettings.lateTime;
             document.getElementById('setting-semester-start').value = globalSettings.semesterStartDate;
+            document.getElementById('setting-learned-chars').value = globalSettings.learnedChars || ''; 
             document.getElementById('setting-grid-rows-morning').value = getGridRowsBySide('morning');
             document.getElementById('setting-grid-rows-left').value = getGridRowsBySide('left');
             document.getElementById('setting-grid-rows-right').value = getGridRowsBySide('right');
@@ -1410,6 +1417,9 @@
             globalSettings.excludedSeats = exclStr.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
             globalSettings.lateTime = document.getElementById('setting-late-time').value || "07:50";
             globalSettings.semesterStartDate = document.getElementById('setting-semester-start').value;
+            globalSettings.learnedChars = [...new Set(
+                document.getElementById('setting-learned-chars').value.match(/\p{Script=Han}/gu) || []
+            )].join('');
             globalSettings.gridRowsMorning = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-morning').value) || 6));
             globalSettings.gridRowsLeft = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-left').value) || 6));
             globalSettings.gridRowsRight = Math.max(3, Math.min(15, parseInt(document.getElementById('setting-grid-rows-right').value) || 5));
@@ -1420,7 +1430,11 @@
             
             if(isCloud && user) {
                 db.collection('users').doc(user.uid).collection('settings_low').doc('global').set(globalSettings)
-                  .then(() => showSaving("全域設定已儲存至雲端！"));
+                  .then(() => showSaving("全域設定已儲存至雲端！"))
+                  .catch(error => {
+                      console.error(error);
+                      showSaving("雲端儲存失敗，設定已保存在此電腦，請再試一次。");
+                  });
             } else {
                 showSaving("全域設定已本機儲存！");
             }
@@ -1842,7 +1856,16 @@
             container.appendChild(board);
         }
 
-        /* 填入單一方格內容，並綁定單格三態循環切換（國字＋注音 ➔ 純國字 ➔ 純注音） */
+        // 已學字模式先依生字名單決定顯示方式，單格指定仍優先套用。
+        function getEffectiveCellMode(rObj) {
+            const mode = rObj.cellMode ?? displayMode;
+            if (mode === 3) {
+                return (globalSettings.learnedChars || '').includes(rObj.char) ? 1 : 2;
+            }
+            return mode;
+        }
+
+        /* 填入單一方格內容，並綁定單格三態循環切換（字注音 ➔ 純國字 ➔ 純注音） */
         function populateGridCell(cell, rObj, side, itemIdx, tokenIdx) {
             if (rObj.type === 'eng-num') {
                 const str = rObj.char || '';
@@ -1866,10 +1889,8 @@
                     return;
                 }
 
-                // 0: 國字＋注音, 1: 純國字, 2: 純注音
-                const effectiveMode = (rObj.cellMode !== undefined && rObj.cellMode !== null)
-                    ? rObj.cellMode
-                    : displayMode;
+                // 0: 字注音, 1: 純國字, 2: 純注音, 3: 已學字自動判定
+                const effectiveMode = getEffectiveCellMode(rObj);
 
                 if (!rObj.bpmf || effectiveMode === 1) {
                     cell.innerHTML = `<div class="cell-char-only">${rObj.char}</div>`;
@@ -1883,7 +1904,7 @@
                 }
 
                 cell.classList.add('interactive-cell');
-                cell.title = '點擊切換此格：國字＋注音 ／ 純國字 ／ 純注音';
+                cell.title = '點擊切換此格：字注音 ／ 純國字 ／ 純注音';
                 cell.onclick = (e) => {
                     e.stopPropagation();
                     toggleSingleCellMode(side, itemIdx, tokenIdx);
@@ -1896,7 +1917,7 @@
             const item = list[itemIdx];
             if (!item || !item.rubyData || !item.rubyData[tokenIdx]) return;
             const rObj = item.rubyData[tokenIdx];
-            const current = (rObj.cellMode !== undefined && rObj.cellMode !== null) ? rObj.cellMode : displayMode;
+            const current = getEffectiveCellMode(rObj);
             rObj.cellMode = (current + 1) % 3;
             saveData();
         }
@@ -2347,7 +2368,7 @@
 
         /* 點擊上方整體顯示模式時，一鍵切換全體狀態並將三區所有單格對齊至該模式 */
         document.getElementById('toggle-display-btn').addEventListener('click', () => {
-            displayMode = (displayMode + 1) % 3;
+            displayMode = (displayMode + 1) % modeNames.length;
             localStorage.setItem('board_display_mode_low', displayMode.toString());
             ['morningList', 'leftList', 'rightList'].forEach(listKey => {
                 if (currentData[listKey]) {
@@ -2380,9 +2401,10 @@
                     ${!rObj.isBopomofoOnly ? `
                     <select class="ruby-mode-select" id="edit-mode-${i}">
                         <option value="auto" ${currentCellMode === 'auto' ? 'selected' : ''}>跟隨全體模式</option>
-                        <option value="0" ${currentCellMode === '0' ? 'selected' : ''}>國字＋注音</option>
+                        <option value="0" ${currentCellMode === '0' ? 'selected' : ''}>字注音</option>
                         <option value="1" ${currentCellMode === '1' ? 'selected' : ''}>純國字</option>
                         <option value="2" ${currentCellMode === '2' ? 'selected' : ''}>純注音</option>
+                        <option value="3" ${currentCellMode === '3' ? 'selected' : ''}>已學字</option>
                     </select>` : ''}
                 `;
                 grid.appendChild(card);
